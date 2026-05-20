@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>健康助手 - 经期日历</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav>
+  <a href="index.html" class="logo">健康助手</a>
+  <div class="nav-links">
+    <a href="index.html">身体数据</a>
+    <a href="period.html" class="active">经期日历</a>
+    <a href="history.html">历史记录</a>
+  </div>
+</nav>
+
+<div class="card">
+  <h1>经期日历</h1>
+  <p class="subtitle">记录周期 · 症状追踪 · 阶段建议</p>
+
+  <div class="cal-header">
+    <button onclick="calNav(-1)">&larr; 上月</button>
+    <span class="month-label" id="calMonth"></span>
+    <button onclick="calNav(1)">下月 &rarr;</button>
+  </div>
+  <div class="cal-weekdays"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+  <div id="calHint" style="text-align:center;font-size:.72em;color:#e91e63;margin-bottom:8px;min-height:16px"></div>
+  <div class="cal-grid" id="calGrid"></div>
+  <div class="stats-row" id="calStats"></div>
+  <div id="phaseAdvice"></div>
+  <div class="symptom-panel" id="symptomPanel">
+    <div class="symptom-date" id="symDate"></div>
+    <div class="symptom-section">
+      <div class="lbl">症状</div>
+      <div class="symptom-tags" id="symTags"></div>
+    </div>
+    <div class="symptom-section">
+      <div class="lbl">心情</div>
+      <div class="symptom-tags" id="moodTags"></div>
+    </div>
+    <button class="sym-save-btn" onclick="saveSymptom()">保存</button>
+  </div>
+</div>
+
+<script>
+const SYMPTOMS = ['痛经','头痛','疲劳','情绪波动','腰酸','食欲变化','乳房胀痛','失眠'];
+const MOODS = ['😊 正常','😔 低落','😤 烦躁','😴 嗜睡','🥰 愉快'];
+let calYear, calMonth, selectedDate = null, periodStart = null;
+
+function getPeriodData() {
+  try { return JSON.parse(localStorage.getItem('period_data') || '{"periods":[],"symptoms":{}}'); }
+  catch { return { periods: [], symptoms: {} }; }
+}
+function savePeriodData(d) { localStorage.setItem('period_data', JSON.stringify(d)); }
+
+function initCal() {
+  const now = new Date();
+  calYear = now.getFullYear();
+  calMonth = now.getMonth();
+}
+
+function calNav(dir) {
+  calMonth += dir;
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  renderCalendar();
+}
+
+function renderCalendar() {
+  const data = getPeriodData();
+  const periodSet = new Set(data.periods);
+  const today = new Date();
+  const todayStr = fmt(today);
+
+  document.getElementById('calMonth').textContent = `${calYear}年${calMonth + 1}月`;
+  document.getElementById('calHint').textContent = periodStart ? `已选开始日 ${periodStart}，请点击结束日` : '点击日期标记经期开始日，再点结束日自动填充';
+
+  const first = new Date(calYear, calMonth, 1);
+  const last = new Date(calYear, calMonth + 1, 0);
+  const startDay = first.getDay();
+
+  const predictions = getPredictions(data);
+  const predSet = new Set(predictions.predicted);
+  const ovuSet = new Set(predictions.ovulation);
+
+  let html = '';
+  for (let i = 0; i < startDay; i++) html += '<div class="cal-day empty"></div>';
+  for (let d = 1; d <= last.getDate(); d++) {
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    let cls = 'cal-day';
+    if (dateStr === todayStr) cls += ' today';
+    if (periodSet.has(dateStr)) cls += ' period';
+    else if (predSet.has(dateStr)) cls += ' predicted';
+    if (ovuSet.has(dateStr)) cls += ' ovulation';
+    if (data.symptoms[dateStr]) cls += ' symptom-dot';
+    if (periodStart === dateStr) cls += ' period-start';
+    html += `<div class="${cls}" onclick="togglePeriod('${dateStr}')"><span class="day-num">${d}</span></div>`;
+  }
+  document.getElementById('calGrid').innerHTML = html;
+
+  const stats = getStats(data);
+  const nextPeriod = predictions.nextPeriod;
+  const daysUntil = nextPeriod ? Math.ceil((new Date(nextPeriod) - today) / 86400000) : null;
+  const monthPrefix = `${calYear}-${String(calMonth+1).padStart(2,'0')}`;
+  const monthDays = data.periods.filter(d => d.startsWith(monthPrefix)).length;
+  document.getElementById('calStats').innerHTML = `
+    <div class="stats-card"><div class="val">${stats.avgCycle || '--'}</div><div class="lbl">平均周期（天）</div></div>
+    <div class="stats-card"><div class="val">${stats.avgDuration || '--'}</div><div class="lbl">平均经期（天）</div></div>
+    <div class="stats-card"><div class="val">${monthDays}</div><div class="lbl">本月经期（天）</div></div>
+    <div class="stats-card"><div class="val">${daysUntil !== null && daysUntil >= 0 ? daysUntil + '天' : '--'}</div><div class="lbl">距下次经期</div></div>
+  `;
+
+  renderPhaseAdvice(data, predictions, today);
+}
+
+function fmt(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function togglePeriod(dateStr) {
+  const data = getPeriodData();
+  if (data.periods.includes(dateStr)) {
+    data.periods = data.periods.filter(d => d !== dateStr);
+    periodStart = null;
+    selectedDate = null;
+    document.getElementById('symptomPanel').classList.remove('show');
+    savePeriodData(data);
+    renderCalendar();
+    return;
+  }
+  if (!periodStart) {
+    periodStart = dateStr;
+    renderCalendar();
+    return;
+  }
+  const start = new Date(periodStart);
+  const end = new Date(dateStr);
+  if (end < start) { start.setTime(end.getTime()); end.setTime(new Date(periodStart).getTime()); }
+  const d = new Date(start);
+  while (d <= end) {
+    const ds = fmt(d);
+    if (!data.periods.includes(ds)) data.periods.push(ds);
+    d.setDate(d.getDate() + 1);
+  }
+  data.periods.sort();
+  periodStart = null;
+  savePeriodData(data);
+  renderCalendar();
+}
+
+function getPeriodGroups(data) {
+  if (!data.periods.length) return [];
+  const sorted = [...data.periods].sort();
+  const groups = [[sorted[0]]];
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = new Date(sorted[i-1]);
+    const curr = new Date(sorted[i]);
+    const diff = (curr - prev) / 86400000;
+    if (diff <= 2) groups[groups.length - 1].push(sorted[i]);
+    else groups.push([sorted[i]]);
+  }
+  return groups;
+}
+
+function getStats(data) {
+  const groups = getPeriodGroups(data);
+  if (groups.length < 2) {
+    const avgDuration = groups.length ? groups[0].length : null;
+    return { avgCycle: null, avgDuration };
+  }
+  const cycles = [];
+  for (let i = 1; i < groups.length; i++) {
+    const diff = (new Date(groups[i][0]) - new Date(groups[i-1][0])) / 86400000;
+    if (diff > 15 && diff < 60) cycles.push(diff);
+  }
+  const durations = groups.map(g => g.length);
+  return {
+    avgCycle: cycles.length ? Math.round(cycles.reduce((a,b) => a+b, 0) / cycles.length) : null,
+    avgDuration: Math.round(durations.reduce((a,b) => a+b, 0) / durations.length)
+  };
+}
+
+function getPredictions(data) {
+  const groups = getPeriodGroups(data);
+  const stats = getStats(data);
+  const result = { predicted: [], ovulation: [], nextPeriod: null };
+  if (!groups.length || !stats.avgCycle) return result;
+  const lastStart = new Date(groups[groups.length - 1][0]);
+  const nextStart = new Date(lastStart);
+  nextStart.setDate(nextStart.getDate() + stats.avgCycle);
+  result.nextPeriod = fmt(nextStart);
+  for (let p = 0; p < 3; p++) {
+    const pStart = new Date(lastStart);
+    pStart.setDate(pStart.getDate() + stats.avgCycle * (p + 1));
+    for (let d = 0; d < (stats.avgDuration || 5); d++) {
+      const dd = new Date(pStart);
+      dd.setDate(dd.getDate() + d);
+      result.predicted.push(fmt(dd));
+    }
+    const ovu = new Date(pStart);
+    ovu.setDate(ovu.getDate() - 14);
+    for (let d = -1; d <= 1; d++) {
+      const od = new Date(ovu);
+      od.setDate(od.getDate() + d);
+      result.ovulation.push(fmt(od));
+    }
+  }
+  return result;
+}
+
+function showSymptomPanel(dateStr, data) {
+  const panel = document.getElementById('symptomPanel');
+  panel.classList.add('show');
+  document.getElementById('symDate').textContent = dateStr + ' 症状记录';
+  const record = data.symptoms[dateStr] || { symptoms: [], mood: '' };
+  document.getElementById('symTags').innerHTML = SYMPTOMS.map(s =>
+    `<span class="sym-tag ${record.symptoms.includes(s) ? 'active' : ''}" onclick="this.classList.toggle('active')">${s}</span>`
+  ).join('');
+  document.getElementById('moodTags').innerHTML = MOODS.map(m =>
+    `<span class="sym-tag mood ${record.mood === m ? 'active' : ''}" onclick="toggleMood(this,'${m}')">${m}</span>`
+  ).join('');
+  panel._dateStr = dateStr;
+}
+
+function toggleMood(el) {
+  el.parentElement.querySelectorAll('.sym-tag').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function saveSymptom() {
+  const panel = document.getElementById('symptomPanel');
+  const dateStr = panel._dateStr;
+  const data = getPeriodData();
+  const symptoms = [];
+  document.getElementById('symTags').querySelectorAll('.sym-tag.active').forEach(t => symptoms.push(t.textContent));
+  const moodEl = document.getElementById('moodTags').querySelector('.sym-tag.active');
+  const mood = moodEl ? moodEl.textContent : '';
+  if (symptoms.length || mood) data.symptoms[dateStr] = { symptoms, mood };
+  else delete data.symptoms[dateStr];
+  savePeriodData(data);
+  renderCalendar();
+  panel.classList.remove('show');
+}
+
+function renderPhaseAdvice(data, predictions, today) {
+  const container = document.getElementById('phaseAdvice');
+  const groups = getPeriodGroups(data);
+  if (!groups.length || !predictions.nextPeriod) {
+    container.innerHTML = '<div style="text-align:center;color:#bbb;font-size:.82em;padding:16px">标记经期日后显示阶段建议</div>';
+    return;
+  }
+  const stats = getStats(data);
+  const cycle = stats.avgCycle || 28;
+  const lastStart = new Date(groups[groups.length - 1][0]);
+  const dayInCycle = Math.floor((today - lastStart) / 86400000) + 1;
+
+  let cls, icon, title, advice;
+  if (dayInCycle <= (stats.avgDuration || 5)) {
+    cls = 'phase-period'; icon = '🩸'; title = '经期（第' + dayInCycle + '天）';
+    advice = '<b>饮食：</b>多吃红肉、菠菜、红枣等补铁食物，喝温热的红糖姜茶，避免生冷食物。<br><b>运动：</b>轻度运动为主，如散步、拉伸、瑜伽，避免高强度训练。<br><b>注意：</b>保证充足睡眠，注意保暖，可热敷缓解痛经。';
+  } else if (dayInCycle <= cycle - 14 - 4) {
+    cls = 'phase-follicular'; icon = '🌱'; title = '卵泡期（第' + dayInCycle + '天）';
+    advice = '<b>饮食：</b>高蛋白饮食（鸡胸肉、鱼虾、鸡蛋），补充绿叶蔬菜和全谷物，减脂黄金期。<br><b>运动：</b>有氧运动效果最佳，可安排跑步、游泳、HIIT。<br><b>注意：</b>精力充沛，适合安排高强度工作和运动。';
+  } else if (dayInCycle <= cycle - 14 + 2) {
+    cls = 'phase-ovulation'; icon = '🥚'; title = '排卵期（第' + dayInCycle + '天）';
+    advice = '<b>饮食：</b>补充维生素 E（坚果、牛油果）和 Omega-3（深海鱼），多吃十字花科蔬菜。<br><b>运动：</b>运动量可适当加大，力量训练效果好。<br><b>注意：</b>体温可能略升高，分泌物增多属正常现象。';
+  } else {
+    cls = 'phase-luteal'; icon = '🌙'; title = '黄体期（第' + dayInCycle + '天）';
+    advice = '<b>饮食：</b>补充钙和镁（牛奶、香蕉、深色蔬菜），控制食欲，可适当吃黑巧克力。<br><b>运动：</b>选择舒缓运动（瑜伽、游泳、快走），避免过度刺激。<br><b>注意：</b>可能出现 PMS 症状，保持规律作息，减少咖啡因摄入。';
+  }
+  container.innerHTML = `<div class="phase-card ${cls}"><div class="phase-title">${icon} ${title}</div>${advice}</div>`;
+}
+
+initCal();
+renderCalendar();
+</script>
+</body>
+</html>

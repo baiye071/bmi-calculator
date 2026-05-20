@@ -1,0 +1,127 @@
+*{margin:0;padding:0;box-sizing:border-box}
+body{min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Microsoft YaHei",sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:70px 20px 20px}
+/* Nav */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:54px;background:rgba(255,255,255,.95);backdrop-filter:blur(10px);box-shadow:0 2px 20px rgba(0,0,0,.1)}
+nav .logo{font-size:1.05em;font-weight:800;color:#667eea;text-decoration:none}
+nav .nav-links{display:flex;gap:4px}
+nav .nav-links a{padding:8px 14px;border-radius:8px;text-decoration:none;font-size:.82em;font-weight:600;color:#888;transition:all .2s}
+nav .nav-links a:hover{color:#667eea;background:rgba(102,126,234,.08)}
+nav .nav-links a.active{color:#667eea;background:rgba(102,126,234,.12)}
+/* Card */
+.card{background:#fff;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.3);padding:36px;width:100%;max-width:480px;margin:0 auto;animation:fadeUp .6s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+h1{text-align:center;font-size:1.5em;color:#333;margin-bottom:4px}
+.subtitle{text-align:center;color:#999;font-size:.82em;margin-bottom:24px}
+/* Form */
+.form-group{margin-bottom:16px}
+label{display:block;font-size:.82em;color:#555;margin-bottom:5px;font-weight:600}
+input[type=number],select{width:100%;padding:11px 14px;border:2px solid #e8e8e8;border-radius:10px;font-size:.95em;outline:none;transition:border .2s;background:#fff}
+input[type=number]:focus,select:focus{border-color:#667eea}
+.row{display:flex;gap:10px}
+.row .form-group{flex:1}
+.gender-group{display:flex;gap:8px}
+.gender-btn{flex:1;padding:10px;border:2px solid #e8e8e8;border-radius:10px;background:#fff;font-size:.95em;cursor:pointer;transition:all .2s;text-align:center;font-weight:600;color:#888}
+.gender-btn:hover{border-color:#667eea;color:#667eea}
+.gender-btn.active{border-color:#667eea;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff}
+.calc-btn{width:100%;padding:13px;border:none;border-radius:12px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-size:1.05em;font-weight:700;cursor:pointer;transition:transform .15s,box-shadow .15s;margin-top:6px}
+.calc-btn:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(102,126,234,.4)}
+.calc-btn:active{transform:translateY(0)}
+/* Results */
+.result{margin-top:24px;animation:fadeUp .4s ease}
+.result-card{background:linear-gradient(135deg,#f5f7fa,#e8ecf1);border-radius:12px;padding:16px;margin-bottom:12px}
+.result-label{font-size:.75em;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}
+.result-value{font-size:1.7em;font-weight:800;color:#333}
+.result-sub{font-size:.8em;color:#777;margin-top:4px}
+.result-tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.72em;font-weight:700;margin-top:5px}
+.tag-underweight{background:#e3f2fd;color:#1976d2}
+.tag-normal{background:#e8f5e9;color:#388e3c}
+.tag-overweight{background:#fff3e0;color:#f57c00}
+.tag-obese{background:#fce4ec;color:#c62828}
+.progress-bar{height:7px;border-radius:4px;background:#e8e8e8;margin-top:8px;overflow:hidden}
+.progress-fill{height:100%;border-radius:4px;transition:width .8s ease}
+.scale{display:flex;justify-content:space-between;font-size:.62em;color:#aaa;margin-top:3px}
+.ref-table{margin-top:16px;font-size:.73em;color:#777;line-height:1.7}
+.ref-table span{font-weight:600;color:#555}
+.hidden{display:none}
+/* History */
+.history-list{max-height:400px;overflow-y:auto}
+.history-item{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:10px;background:#f8f9fa;margin-bottom:8px;font-size:.82em}
+.history-item .info{flex:1}
+.history-item .date{color:#999;font-size:.85em}
+.history-item .stats{color:#555;margin-top:2px}
+.history-item .del-btn{background:none;border:none;color:#ccc;font-size:1.2em;cursor:pointer;padding:4px 8px;border-radius:6px;transition:all .15s}
+.history-item .del-btn:hover{color:#ef5350;background:#fce4ec}
+.empty-msg{text-align:center;color:#bbb;padding:40px 0;font-size:.9em}
+.chart-wrap{background:#f8f9fa;border-radius:12px;padding:16px;margin-bottom:16px}
+.chart-wrap canvas{width:100%;height:220px}
+.chart-legend{display:flex;gap:16px;justify-content:center;margin-top:8px;font-size:.72em;color:#888}
+.chart-legend span::before{content:'';display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.chart-legend .leg-bmi::before{background:#667eea}
+.chart-legend .leg-bf::before{background:#ef5350}
+.btn-row{display:flex;gap:8px;margin-bottom:16px}
+.btn-sm{flex:1;padding:8px;border:1.5px solid #e0e0e0;border-radius:8px;background:#fff;font-size:.78em;color:#888;cursor:pointer;transition:all .15s;text-align:center}
+.btn-sm:hover{border-color:#667eea;color:#667eea}
+.btn-sm.danger:hover{border-color:#ef5350;color:#ef5350}
+/* Diet advice */
+.diet-card{background:linear-gradient(135deg,#f0fdf4,#ecfdf5);border-radius:12px;padding:16px;margin-bottom:12px;border-left:4px solid #22c55e}
+.diet-card.warn{background:linear-gradient(135deg,#fffbeb,#fef3c7);border-left-color:#f59e0b}
+.diet-card.strict{background:linear-gradient(135deg,#fef2f2,#fee2e2);border-left-color:#ef4444}
+.diet-title{font-size:.85em;font-weight:700;color:#333;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.diet-title .icon{font-size:1.1em}
+.macro-row{display:flex;gap:8px;margin-bottom:10px}
+.macro-item{flex:1;text-align:center;padding:8px 4px;border-radius:8px;background:rgba(255,255,255,.7)}
+.macro-item .val{font-size:1.1em;font-weight:800;color:#333}
+.macro-item .lbl{font-size:.65em;color:#888;margin-top:2px}
+.macro-item.protein .val{color:#22c55e}
+.macro-item.carb .val{color:#f59e0b}
+.macro-item.fat .val{color:#ef4444}
+.food-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.food-tag{padding:4px 10px;border-radius:16px;font-size:.72em;font-weight:600;background:#fff;color:#555;border:1px solid #e5e7eb}
+.food-tag.good{background:#dcfce7;color:#166534;border-color:#bbf7d0}
+.food-tag.avoid{background:#fee2e2;color:#991b1b;border-color:#fecaca}
+.diet-tips{font-size:.75em;color:#666;line-height:1.7;margin-top:6px}
+.diet-tips li{margin-bottom:3px}
+/* Calendar */
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.cal-header .month-label{font-size:1.05em;font-weight:700;color:#333}
+.cal-header button{background:none;border:1.5px solid #e0e0e0;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:.85em;color:#666;transition:all .15s}
+.cal-header button:hover{border-color:#667eea;color:#667eea}
+.cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:.72em;color:#aaa;margin-bottom:6px;font-weight:600}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cal-day{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:10px;cursor:pointer;font-size:.82em;color:#555;transition:all .15s;position:relative;min-height:40px}
+.cal-day:hover{background:#f5f5f5}
+.cal-day.empty{cursor:default}.cal-day.empty:hover{background:none}
+.cal-day.today{font-weight:800;color:#667eea}
+.cal-day.today::after{content:'';position:absolute;bottom:4px;width:4px;height:4px;border-radius:50%;background:#667eea}
+.cal-day.period{background:#fce4ec;color:#c62828;font-weight:700}
+.cal-day.predicted{background:rgba(244,143,177,.15);color:#e91e63;border:1.5px dashed #f48fb1}
+.cal-day.ovulation{background:#e3f2fd;color:#1976d2}
+.cal-day.ovulation::before{content:'';position:absolute;top:4px;right:4px;width:6px;height:6px;border-radius:50%;background:#42a5f5}
+.cal-day.symptom-dot::after{content:'';position:absolute;bottom:3px;width:4px;height:4px;border-radius:50%;background:#ff9800}
+.cal-day.period-start{background:#e91e63;color:#fff;font-weight:700;box-shadow:0 0 0 2px #e91e63}
+.cal-day .day-num{line-height:1}
+/* Symptom panel */
+.symptom-panel{margin-top:16px;background:#f8f9fa;border-radius:12px;padding:16px;display:none}
+.symptom-panel.show{display:block;animation:fadeUp .3s ease}
+.symptom-date{font-size:.85em;font-weight:700;color:#333;margin-bottom:10px}
+.symptom-section{margin-bottom:12px}
+.symptom-section .lbl{font-size:.75em;color:#888;margin-bottom:6px;font-weight:600}
+.symptom-tags{display:flex;flex-wrap:wrap;gap:6px}
+.sym-tag{padding:5px 12px;border-radius:18px;font-size:.73em;cursor:pointer;border:1.5px solid #e0e0e0;background:#fff;color:#666;transition:all .15s}
+.sym-tag:hover{border-color:#667eea;color:#667eea}
+.sym-tag.active{background:#667eea;color:#fff;border-color:#667eea}
+.sym-tag.mood{font-size:1em;padding:4px 10px}
+.sym-save-btn{width:100%;padding:10px;border:none;border-radius:10px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-size:.85em;font-weight:600;cursor:pointer;margin-top:8px;transition:all .15s}
+.sym-save-btn:hover{transform:translateY(-1px);box-shadow:0 4px 15px rgba(102,126,234,.3)}
+/* Stats card */
+.stats-row{display:flex;gap:8px;margin-top:16px;margin-bottom:12px}
+.stats-card{flex:1;background:linear-gradient(135deg,#f5f7fa,#e8ecf1);border-radius:10px;padding:12px;text-align:center}
+.stats-card .val{font-size:1.3em;font-weight:800;color:#333}
+.stats-card .lbl{font-size:.65em;color:#888;margin-top:2px}
+/* Phase advice */
+.phase-card{border-radius:12px;padding:14px;margin-top:12px;font-size:.78em;line-height:1.7}
+.phase-card.phase-period{background:linear-gradient(135deg,#fce4ec,#f8bbd0);border-left:4px solid #e91e63}
+.phase-card.phase-follicular{background:linear-gradient(135deg,#e8f5e9,#c8e6c9);border-left:4px solid #4caf50}
+.phase-card.phase-ovulation{background:linear-gradient(135deg,#e3f2fd,#bbdefb);border-left:4px solid #2196f3}
+.phase-card.phase-luteal{background:linear-gradient(135deg,#fff3e0,#ffe0b2);border-left:4px solid #ff9800}
+.phase-card .phase-title{font-weight:700;margin-bottom:4px;color:#333}

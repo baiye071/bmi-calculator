@@ -3,272 +3,99 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>健康助手 - BMI & 体脂率 & 经期日历</title>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Microsoft YaHei",sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:20px}
-.card{background:#fff;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.3);padding:36px;width:100%;max-width:480px;animation:fadeUp .6s ease}
-@keyframes fadeUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
-h1{text-align:center;font-size:1.5em;color:#333;margin-bottom:4px}
-.subtitle{text-align:center;color:#999;font-size:.82em;margin-bottom:24px}
-/* Tabs */
-.tabs{display:flex;border-bottom:2px solid #eee;margin-bottom:24px}
-.tab{flex:1;padding:10px;text-align:center;font-size:.9em;font-weight:600;color:#aaa;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .2s}
-.tab:hover{color:#667eea}
-.tab.active{color:#667eea;border-bottom-color:#667eea}
-.tab-content{display:none}.tab-content.active{display:block}
-/* Form */
-.form-group{margin-bottom:16px}
-label{display:block;font-size:.82em;color:#555;margin-bottom:5px;font-weight:600}
-input[type=number],select{width:100%;padding:11px 14px;border:2px solid #e8e8e8;border-radius:10px;font-size:.95em;outline:none;transition:border .2s;background:#fff}
-input[type=number]:focus,select:focus{border-color:#667eea}
-.row{display:flex;gap:10px}
-.row .form-group{flex:1}
-.gender-group{display:flex;gap:8px}
-.gender-btn{flex:1;padding:10px;border:2px solid #e8e8e8;border-radius:10px;background:#fff;font-size:.95em;cursor:pointer;transition:all .2s;text-align:center;font-weight:600;color:#888}
-.gender-btn:hover{border-color:#667eea;color:#667eea}
-.gender-btn.active{border-color:#667eea;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff}
-.calc-btn{width:100%;padding:13px;border:none;border-radius:12px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-size:1.05em;font-weight:700;cursor:pointer;transition:transform .15s,box-shadow .15s;margin-top:6px}
-.calc-btn:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(102,126,234,.4)}
-.calc-btn:active{transform:translateY(0)}
-/* Results */
-.result{margin-top:24px;animation:fadeUp .4s ease}
-.result-card{background:linear-gradient(135deg,#f5f7fa,#e8ecf1);border-radius:12px;padding:16px;margin-bottom:12px}
-.result-label{font-size:.75em;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}
-.result-value{font-size:1.7em;font-weight:800;color:#333}
-.result-sub{font-size:.8em;color:#777;margin-top:4px}
-.result-tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.72em;font-weight:700;margin-top:5px}
-.tag-underweight{background:#e3f2fd;color:#1976d2}
-.tag-normal{background:#e8f5e9;color:#388e3c}
-.tag-overweight{background:#fff3e0;color:#f57c00}
-.tag-obese{background:#fce4ec;color:#c62828}
-.progress-bar{height:7px;border-radius:4px;background:#e8e8e8;margin-top:8px;overflow:hidden}
-.progress-fill{height:100%;border-radius:4px;transition:width .8s ease}
-.scale{display:flex;justify-content:space-between;font-size:.62em;color:#aaa;margin-top:3px}
-.ref-table{margin-top:16px;font-size:.73em;color:#777;line-height:1.7}
-.ref-table span{font-weight:600;color:#555}
-.hidden{display:none}
-/* History */
-.history-list{max-height:320px;overflow-y:auto}
-.history-item{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:10px;background:#f8f9fa;margin-bottom:8px;font-size:.82em}
-.history-item .info{flex:1}
-.history-item .date{color:#999;font-size:.85em}
-.history-item .stats{color:#555;margin-top:2px}
-.history-item .del-btn{background:none;border:none;color:#ccc;font-size:1.2em;cursor:pointer;padding:4px 8px;border-radius:6px;transition:all .15s}
-.history-item .del-btn:hover{color:#ef5350;background:#fce4ec}
-.empty-msg{text-align:center;color:#bbb;padding:40px 0;font-size:.9em}
-.chart-wrap{background:#f8f9fa;border-radius:12px;padding:16px;margin-bottom:16px}
-.chart-wrap canvas{width:100%;height:200px}
-.chart-legend{display:flex;gap:16px;justify-content:center;margin-top:8px;font-size:.72em;color:#888}
-.chart-legend span::before{content:'';display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
-.chart-legend .leg-bmi::before{background:#667eea}
-.chart-legend .leg-bf::before{background:#ef5350}
-.btn-row{display:flex;gap:8px;margin-bottom:16px}
-.btn-sm{flex:1;padding:8px;border:1.5px solid #e0e0e0;border-radius:8px;background:#fff;font-size:.78em;color:#888;cursor:pointer;transition:all .15s;text-align:center}
-.btn-sm:hover{border-color:#667eea;color:#667eea}
-.btn-sm.danger:hover{border-color:#ef5350;color:#ef5350}
-/* Diet advice */
-.diet-card{background:linear-gradient(135deg,#f0fdf4,#ecfdf5);border-radius:12px;padding:16px;margin-bottom:12px;border-left:4px solid #22c55e}
-.diet-card.warn{background:linear-gradient(135deg,#fffbeb,#fef3c7);border-left-color:#f59e0b}
-.diet-card.strict{background:linear-gradient(135deg,#fef2f2,#fee2e2);border-left-color:#ef4444}
-.diet-title{font-size:.85em;font-weight:700;color:#333;margin-bottom:8px;display:flex;align-items:center;gap:6px}
-.diet-title .icon{font-size:1.1em}
-.macro-row{display:flex;gap:8px;margin-bottom:10px}
-.macro-item{flex:1;text-align:center;padding:8px 4px;border-radius:8px;background:rgba(255,255,255,.7)}
-.macro-item .val{font-size:1.1em;font-weight:800;color:#333}
-.macro-item .lbl{font-size:.65em;color:#888;margin-top:2px}
-.macro-item.protein .val{color:#22c55e}
-.macro-item.carb .val{color:#f59e0b}
-.macro-item.fat .val{color:#ef4444}
-.food-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
-.food-tag{padding:4px 10px;border-radius:16px;font-size:.72em;font-weight:600;background:#fff;color:#555;border:1px solid #e5e7eb}
-.food-tag.good{background:#dcfce7;color:#166534;border-color:#bbf7d0}
-.food-tag.avoid{background:#fee2e2;color:#991b1b;border-color:#fecaca}
-.diet-tips{font-size:.75em;color:#666;line-height:1.7;margin-top:6px}
-.diet-tips li{margin-bottom:3px}
-/* Calendar */
-.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-.cal-header .month-label{font-size:1.05em;font-weight:700;color:#333}
-.cal-header button{background:none;border:1.5px solid #e0e0e0;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:.85em;color:#666;transition:all .15s}
-.cal-header button:hover{border-color:#667eea;color:#667eea}
-.cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:.72em;color:#aaa;margin-bottom:6px;font-weight:600}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
-.cal-day{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:10px;cursor:pointer;font-size:.82em;color:#555;transition:all .15s;position:relative;min-height:40px}
-.cal-day:hover{background:#f5f5f5}
-.cal-day.empty{cursor:default}.cal-day.empty:hover{background:none}
-.cal-day.today{font-weight:800;color:#667eea}
-.cal-day.today::after{content:'';position:absolute;bottom:4px;width:4px;height:4px;border-radius:50%;background:#667eea}
-.cal-day.period{background:#fce4ec;color:#c62828;font-weight:700}
-.cal-day.predicted{background:rgba(244,143,177,.15);color:#e91e63;border:1.5px dashed #f48fb1}
-.cal-day.ovulation{background:#e3f2fd;color:#1976d2}
-.cal-day.ovulation::before{content:'';position:absolute;top:4px;right:4px;width:6px;height:6px;border-radius:50%;background:#42a5f5}
-.cal-day.symptom-dot::after{content:'';position:absolute;bottom:3px;width:4px;height:4px;border-radius:50%;background:#ff9800}
-.cal-day.period-start{background:#e91e63;color:#fff;font-weight:700;box-shadow:0 0 0 2px #e91e63}
-.cal-day .day-num{line-height:1}
-/* Symptom panel */
-.symptom-panel{margin-top:16px;background:#f8f9fa;border-radius:12px;padding:16px;display:none}
-.symptom-panel.show{display:block;animation:fadeUp .3s ease}
-.symptom-date{font-size:.85em;font-weight:700;color:#333;margin-bottom:10px}
-.symptom-section{margin-bottom:12px}
-.symptom-section .lbl{font-size:.75em;color:#888;margin-bottom:6px;font-weight:600}
-.symptom-tags{display:flex;flex-wrap:wrap;gap:6px}
-.sym-tag{padding:5px 12px;border-radius:18px;font-size:.73em;cursor:pointer;border:1.5px solid #e0e0e0;background:#fff;color:#666;transition:all .15s}
-.sym-tag:hover{border-color:#667eea;color:#667eea}
-.sym-tag.active{background:#667eea;color:#fff;border-color:#667eea}
-.sym-tag.mood{font-size:1em;padding:4px 10px}
-.sym-save-btn{width:100%;padding:10px;border:none;border-radius:10px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-size:.85em;font-weight:600;cursor:pointer;margin-top:8px;transition:all .15s}
-.sym-save-btn:hover{transform:translateY(-1px);box-shadow:0 4px 15px rgba(102,126,234,.3)}
-/* Stats card */
-.stats-row{display:flex;gap:8px;margin-top:16px;margin-bottom:12px}
-.stats-card{flex:1;background:linear-gradient(135deg,#f5f7fa,#e8ecf1);border-radius:10px;padding:12px;text-align:center}
-.stats-card .val{font-size:1.3em;font-weight:800;color:#333}
-.stats-card .lbl{font-size:.65em;color:#888;margin-top:2px}
-/* Phase advice */
-.phase-card{border-radius:12px;padding:14px;margin-top:12px;font-size:.78em;line-height:1.7}
-.phase-card.phase-period{background:linear-gradient(135deg,#fce4ec,#f8bbd0);border-left:4px solid #e91e63}
-.phase-card.phase-follicular{background:linear-gradient(135deg,#e8f5e9,#c8e6c9);border-left:4px solid #4caf50}
-.phase-card.phase-ovulation{background:linear-gradient(135deg,#e3f2fd,#bbdefb);border-left:4px solid #2196f3}
-.phase-card.phase-luteal{background:linear-gradient(135deg,#fff3e0,#ffe0b2);border-left:4px solid #ff9800}
-.phase-card .phase-title{font-weight:700;margin-bottom:4px;color:#333}
-</style>
+<title>健康助手 - 身体数据计算</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
+<nav>
+  <a href="index.html" class="logo">健康助手</a>
+  <div class="nav-links">
+    <a href="index.html" class="active">身体数据</a>
+    <a href="period.html">经期日历</a>
+    <a href="history.html">历史记录</a>
+  </div>
+</nav>
+
 <div class="card">
-  <h1>健康助手</h1>
-  <p class="subtitle">BMI · 体脂率 · 经期日历</p>
+  <h1>身体数据计算</h1>
+  <p class="subtitle">BMI · 体脂率 · TDEE · 饮食建议</p>
 
-  <div class="tabs">
-    <div class="tab active" onclick="switchTab(0)">身体数据</div>
-    <div class="tab" onclick="switchTab(1)">经期日历</div>
-    <div class="tab" onclick="switchTab(2)">历史记录</div>
+  <div class="form-group">
+    <label>性别</label>
+    <div class="gender-group">
+      <button class="gender-btn active" data-gender="male" onclick="setGender('male')">男</button>
+      <button class="gender-btn" data-gender="female" onclick="setGender('female')">女</button>
+    </div>
   </div>
-
-  <!-- Tab 0: Body Data -->
-  <div class="tab-content active" id="tab0">
+  <div class="row">
+    <div class="form-group"><label>身高 (cm)</label><input type="number" id="height" placeholder="170" min="50" max="250" step="0.1"></div>
+    <div class="form-group"><label>体重 (kg)</label><input type="number" id="weight" placeholder="65" min="10" max="300" step="0.1"></div>
+  </div>
+  <div class="row">
+    <div class="form-group"><label>年龄 (岁)</label><input type="number" id="age" placeholder="25" min="2" max="120"></div>
     <div class="form-group">
-      <label>性别</label>
-      <div class="gender-group">
-        <button class="gender-btn active" data-gender="male" onclick="setGender('male')">男</button>
-        <button class="gender-btn" data-gender="female" onclick="setGender('female')">女</button>
-      </div>
-    </div>
-    <div class="row">
-      <div class="form-group"><label>身高 (cm)</label><input type="number" id="height" placeholder="170" min="50" max="250" step="0.1"></div>
-      <div class="form-group"><label>体重 (kg)</label><input type="number" id="weight" placeholder="65" min="10" max="300" step="0.1"></div>
-    </div>
-    <div class="row">
-      <div class="form-group"><label>年龄 (岁)</label><input type="number" id="age" placeholder="25" min="2" max="120"></div>
-      <div class="form-group">
-        <label>活动水平</label>
-        <select id="activity">
-          <option value="1.2">久坐不动</option>
-          <option value="1.375">轻度活动（每周1-3次）</option>
-          <option value="1.55" selected>中度活动（每周3-5次）</option>
-          <option value="1.725">高度活动（每周6-7次）</option>
-          <option value="1.9">极高活动（体力劳动/训练）</option>
-        </select>
-      </div>
-    </div>
-    <div class="row">
-      <div class="form-group"><label>腰围 (cm) <span style="color:#aaa;font-weight:400">可选</span></label><input type="number" id="waist" placeholder="75" min="30" max="200" step="0.1"></div>
-      <div class="form-group"><label>臀围 (cm) <span style="color:#aaa;font-weight:400">可选</span></label><input type="number" id="hip" placeholder="95" min="30" max="200" step="0.1"></div>
-    </div>
-    <button class="calc-btn" onclick="calculate()">开始计算</button>
-
-    <div id="result" class="result hidden">
-      <div class="result-card">
-        <div class="result-label">BMI 指数</div>
-        <div class="result-value" id="bmiValue">--</div>
-        <span class="result-tag" id="bmiTag"></span>
-        <div class="progress-bar"><div class="progress-fill" id="bmiBar"></div></div>
-        <div class="scale"><span>15</span><span>18.5</span><span>24</span><span>28</span><span>40</span></div>
-      </div>
-      <div class="result-card">
-        <div class="result-label">体脂率</div>
-        <div class="result-value" id="bfValue">--%</div>
-        <span class="result-tag" id="bfTag"></span>
-        <div class="progress-bar"><div class="progress-fill" id="bfBar"></div></div>
-        <div class="scale"><span>5%</span><span>15%</span><span>25%</span><span>35%</span><span>50%</span></div>
-      </div>
-      <div class="result-card">
-        <div class="result-label">理想体重</div>
-        <div class="result-value" id="idealValue">-- kg</div>
-        <div class="result-sub" id="idealSub"></div>
-      </div>
-      <div class="result-card">
-        <div class="result-label">每日热量消耗 (TDEE)</div>
-        <div class="result-value" id="tdeeValue">-- kcal</div>
-        <div class="result-sub" id="tdeeSub"></div>
-      </div>
-      <div class="result-card hidden" id="whrCard">
-        <div class="result-label">腰臀比 (WHR)</div>
-        <div class="result-value" id="whrValue">--</div>
-        <span class="result-tag" id="whrTag"></span>
-        <div class="progress-bar"><div class="progress-fill" id="whrBar"></div></div>
-        <div class="scale"><span>0.7</span><span>0.8</span><span>0.9</span><span>1.0</span><span>1.1</span></div>
-      </div>
-      <div class="ref-table" id="refTable"></div>
-      <div id="dietSection"></div>
+      <label>活动水平</label>
+      <select id="activity">
+        <option value="1.2">久坐不动</option>
+        <option value="1.375">轻度活动（每周1-3次）</option>
+        <option value="1.55" selected>中度活动（每周3-5次）</option>
+        <option value="1.725">高度活动（每周6-7次）</option>
+        <option value="1.9">极高活动（体力劳动/训练）</option>
+      </select>
     </div>
   </div>
-
-  <!-- Tab 1: Period Calendar -->
-  <div class="tab-content" id="tab1">
-    <div class="cal-header">
-      <button onclick="calNav(-1)">&larr; 上月</button>
-      <span class="month-label" id="calMonth"></span>
-      <button onclick="calNav(1)">下月 &rarr;</button>
-    </div>
-    <div class="cal-weekdays"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
-    <div id="calHint" style="text-align:center;font-size:.72em;color:#e91e63;margin-bottom:8px;min-height:16px"></div>
-    <div class="cal-grid" id="calGrid"></div>
-    <div class="stats-row" id="calStats"></div>
-    <div id="phaseAdvice"></div>
-    <div class="symptom-panel" id="symptomPanel">
-      <div class="symptom-date" id="symDate"></div>
-      <div class="symptom-section">
-        <div class="lbl">症状</div>
-        <div class="symptom-tags" id="symTags"></div>
-      </div>
-      <div class="symptom-section">
-        <div class="lbl">心情</div>
-        <div class="symptom-tags" id="moodTags"></div>
-      </div>
-      <button class="sym-save-btn" onclick="saveSymptom()">保存</button>
-    </div>
+  <div class="row">
+    <div class="form-group"><label>腰围 (cm) <span style="color:#aaa;font-weight:400">可选</span></label><input type="number" id="waist" placeholder="75" min="30" max="200" step="0.1"></div>
+    <div class="form-group"><label>臀围 (cm) <span style="color:#aaa;font-weight:400">可选</span></label><input type="number" id="hip" placeholder="95" min="30" max="200" step="0.1"></div>
   </div>
+  <button class="calc-btn" onclick="calculate()">开始计算</button>
 
-  <!-- Tab 2: History -->
-  <div class="tab-content" id="tab2">
-    <div class="chart-wrap">
-      <canvas id="trendChart" width="420" height="200"></canvas>
-      <div class="chart-legend">
-        <span class="leg-bmi">BMI</span>
-        <span class="leg-bf">体脂率 (%)</span>
-      </div>
+  <div id="result" class="result hidden">
+    <div class="result-card">
+      <div class="result-label">BMI 指数</div>
+      <div class="result-value" id="bmiValue">--</div>
+      <span class="result-tag" id="bmiTag"></span>
+      <div class="progress-bar"><div class="progress-fill" id="bmiBar"></div></div>
+      <div class="scale"><span>15</span><span>18.5</span><span>24</span><span>28</span><span>40</span></div>
     </div>
-    <div class="btn-row">
-      <button class="btn-sm" onclick="exportData()">导出数据</button>
-      <button class="btn-sm danger" onclick="clearHistory()">清空记录</button>
+    <div class="result-card">
+      <div class="result-label">体脂率</div>
+      <div class="result-value" id="bfValue">--%</div>
+      <span class="result-tag" id="bfTag"></span>
+      <div class="progress-bar"><div class="progress-fill" id="bfBar"></div></div>
+      <div class="scale"><span>5%</span><span>15%</span><span>25%</span><span>35%</span><span>50%</span></div>
     </div>
-    <div class="history-list" id="historyList"></div>
+    <div class="result-card">
+      <div class="result-label">理想体重</div>
+      <div class="result-value" id="idealValue">-- kg</div>
+      <div class="result-sub" id="idealSub"></div>
+    </div>
+    <div class="result-card">
+      <div class="result-label">每日热量消耗 (TDEE)</div>
+      <div class="result-value" id="tdeeValue">-- kcal</div>
+      <div class="result-sub" id="tdeeSub"></div>
+    </div>
+    <div class="result-card hidden" id="whrCard">
+      <div class="result-label">腰臀比 (WHR)</div>
+      <div class="result-value" id="whrValue">--</div>
+      <span class="result-tag" id="whrTag"></span>
+      <div class="progress-bar"><div class="progress-fill" id="whrBar"></div></div>
+      <div class="scale"><span>0.7</span><span>0.8</span><span>0.9</span><span>1.0</span><span>1.1</span></div>
+    </div>
+    <div class="ref-table" id="refTable"></div>
+    <div id="dietSection"></div>
   </div>
 </div>
 
 <script>
 let gender = 'male';
-
 function setGender(g) {
   gender = g;
   document.querySelectorAll('.gender-btn').forEach(b => b.classList.toggle('active', b.dataset.gender === g));
 }
 
-function switchTab(i) {
-  document.querySelectorAll('.tab').forEach((t, idx) => t.classList.toggle('active', idx === i));
-  document.querySelectorAll('.tab-content').forEach((c, idx) => c.classList.toggle('active', idx === i));
-  if (i === 1) renderCalendar();
-  if (i === 2) renderHistory();
-}
+function getHistory() { try { return JSON.parse(localStorage.getItem('bmi_history') || '[]'); } catch { return []; } }
+function saveRecord(r) { const h = getHistory(); h.unshift(r); if (h.length > 100) h.length = 100; localStorage.setItem('bmi_history', JSON.stringify(h)); }
 
 function calculate() {
   const h = parseFloat(document.getElementById('height').value);
@@ -278,9 +105,8 @@ function calculate() {
 
   const hm = h / 100;
   const bmi = w / (hm * hm);
-  const bf = gender === 'male'
-    ? 1.20 * bmi + 0.23 * a - 16.2
-    : 1.20 * bmi + 0.23 * a - 5.4;
+  const bf = gender === 'male' ? 1.20 * bmi + 0.23 * a - 16.2 : 1.20 * bmi + 0.23 * a - 5.4;
+  const isMale = gender === 'male';
 
   // BMI
   document.getElementById('bmiValue').textContent = bmi.toFixed(1);
@@ -301,7 +127,7 @@ function calculate() {
   document.getElementById('bfValue').textContent = bfClamped.toFixed(1) + '%';
   const bfTag = document.getElementById('bfTag');
   let bfClass, bfText;
-  if (gender === 'male') {
+  if (isMale) {
     if (bfClamped < 15) { bfClass = 'tag-underweight'; bfText = '偏瘦'; }
     else if (bfClamped < 20) { bfClass = 'tag-normal'; bfText = '正常'; }
     else if (bfClamped < 25) { bfClass = 'tag-overweight'; bfText = '偏胖'; }
@@ -318,7 +144,7 @@ function calculate() {
   document.getElementById('bfBar').style.width = bfPct + '%';
   document.getElementById('bfBar').style.background = bfClass === 'tag-underweight' ? '#42a5f5' : bfClass === 'tag-normal' ? '#66bb6a' : bfClass === 'tag-overweight' ? '#ffa726' : '#ef5350';
 
-  // Ideal weight (BMI 22 standard)
+  // Ideal weight
   const idealW = 22 * hm * hm;
   const minW = 18.5 * hm * hm;
   const maxW = 24 * hm * hm;
@@ -332,13 +158,10 @@ function calculate() {
 
   // TDEE
   const act = parseFloat(document.getElementById('activity').value);
-  const bmr = gender === 'male'
-    ? 10 * w + 6.25 * h - 5 * a + 5
-    : 10 * w + 6.25 * h - 5 * a - 161;
+  const bmr = isMale ? 10 * w + 6.25 * h - 5 * a + 5 : 10 * w + 6.25 * h - 5 * a - 161;
   const tdee = bmr * act;
   document.getElementById('tdeeValue').textContent = Math.round(tdee) + ' kcal';
-  document.getElementById('tdeeSub').innerHTML =
-    `基础代谢 <b>${Math.round(bmr)}</b> kcal | 减脂目标 <b>${Math.round(tdee * 0.8)}</b> kcal | 增肌目标 <b>${Math.round(tdee * 1.15)}</b> kcal`;
+  document.getElementById('tdeeSub').innerHTML = `基础代谢 <b>${Math.round(bmr)}</b> kcal | 减脂目标 <b>${Math.round(tdee * 0.8)}</b> kcal | 增肌目标 <b>${Math.round(tdee * 1.15)}</b> kcal`;
 
   // WHR
   const waist = parseFloat(document.getElementById('waist').value);
@@ -350,7 +173,7 @@ function calculate() {
     document.getElementById('whrValue').textContent = whr.toFixed(2);
     const whrTag = document.getElementById('whrTag');
     let whrClass, whrText;
-    if (gender === 'male') {
+    if (isMale) {
       if (whr < 0.90) { whrClass = 'tag-normal'; whrText = '正常'; }
       else if (whr < 1.0) { whrClass = 'tag-overweight'; whrText = '风险'; }
       else { whrClass = 'tag-obese'; whrText = '高风险'; }
@@ -364,25 +187,21 @@ function calculate() {
     const whrPct = Math.min(100, Math.max(0, (whr - 0.7) / 0.4 * 100));
     document.getElementById('whrBar').style.width = whrPct + '%';
     document.getElementById('whrBar').style.background = whrClass === 'tag-normal' ? '#66bb6a' : whrClass === 'tag-overweight' ? '#ffa726' : '#ef5350';
-  } else {
-    whrCard.classList.add('hidden');
-  }
+  } else { whrCard.classList.add('hidden'); }
 
   // Reference
-  const isMale = gender === 'male';
   let ref = `<span>BMI：</span>偏瘦 &lt;18.5 | 正常 18.5~23.9 | 偏胖 24~27.9 | 肥胖 ≥28<br>`;
   ref += `<span>体脂率（${isMale ? '男' : '女'}）：</span>${isMale ? '偏瘦 &lt;15% | 正常 15%~20% | 偏胖 20%~25% | 肥胖 ≥25%' : '偏瘦 &lt;20% | 正常 20%~25% | 偏胖 25%~30% | 肥胖 ≥30%'}`;
   if (waist && hip) ref += `<br><span>腰臀比（${isMale ? '男' : '女'}）：</span>${isMale ? '正常 &lt;0.90 | 风险 0.90~0.99 | 高风险 ≥1.00' : '正常 &lt;0.80 | 风险 0.80~0.84 | 高风险 ≥0.85'}`;
   ref += `<br><span style="color:#aaa">* 体脂率采用 BMI 估算法，仅供参考</span>`;
   document.getElementById('refTable').innerHTML = ref;
-
   document.getElementById('result').classList.remove('hidden');
 
-  // Diet recommendations (gender-specific)
+  // Diet
   const goal = bmi < 18.5 ? 'gain' : bmi < 24 ? 'maintain' : 'lose';
   const targetCal = goal === 'lose' ? Math.round(tdee * 0.8) : goal === 'gain' ? Math.round(tdee * 1.15) : Math.round(tdee);
   const proteinG = Math.round(w * (isMale ? (goal === 'lose' ? 2.0 : goal === 'gain' ? 1.8 : 1.5) : (goal === 'lose' ? 1.6 : goal === 'gain' ? 1.5 : 1.2)));
-  const fatPct = isMale ? 0.25 : 0.30; // females need more fat for hormonal health
+  const fatPct = isMale ? 0.25 : 0.30;
   const fatCal = Math.round(targetCal * fatPct);
   const fatG = Math.round(fatCal / 9);
   const carbCal = targetCal - proteinG * 4 - fatCal;
@@ -391,466 +210,25 @@ function calculate() {
   const dietSection = document.getElementById('dietSection');
   let dietHTML = '';
   if (goal === 'lose') {
-    const foods = isMale
-      ? `<span class="food-tag good">鸡胸肉</span><span class="food-tag good">牛肉</span><span class="food-tag good">鱼虾</span>
-         <span class="food-tag good">鸡蛋</span><span class="food-tag good">西兰花</span><span class="food-tag good">糙米</span>`
-      : `<span class="food-tag good">鸡胸肉</span><span class="food-tag good">鱼虾</span><span class="food-tag good">菠菜</span>
-         <span class="food-tag good">豆腐</span><span class="food-tag good">燕麦</span><span class="food-tag good">红枣</span>`;
-    const avoid = isMale
-      ? `<span class="food-tag avoid">啤酒</span><span class="food-tag avoid">炸鸡</span><span class="food-tag avoid">薯片</span><span class="food-tag avoid">白面包</span>`
-      : `<span class="food-tag avoid">奶茶</span><span class="food-tag avoid">蛋糕</span><span class="food-tag avoid">薯片</span><span class="food-tag avoid">冰淇淋</span>`;
-    const tips = isMale ? [
-      `每日热量控制在 <b>${targetCal} kcal</b>，比消耗少约 ${Math.round(tdee - targetCal)} kcal`,
-      `蛋白质摄入较高（${proteinG}g），有助于保留肌肉、增强饱腹感`,
-      `减少精制碳水（白米、白面包），选择粗粮、薯类`,
-      `烹饪方式优先蒸、煮、烤，避免油炸`,
-      `每餐先吃蔬菜和蛋白质，最后吃主食`,
-      `多喝水（每天 2~3L），避免含糖饮料和酒精`
-    ] : [
-      `每日热量控制在 <b>${targetCal} kcal</b>，比消耗少约 ${Math.round(tdee - targetCal)} kcal`,
-      `蛋白质摄入 ${proteinG}g，搭配铁质丰富的食物（菠菜、红肉、黑豆）`,
-      `减脂期间每日热量不低于 1200 kcal，避免影响生理周期`,
-      `选择低 GI 碳水（燕麦、糙米），保持血糖稳定`,
-      `适量摄入健康脂肪（牛油果、坚果），脂肪占比 ${Math.round(fatPct*100)}% 有助于激素平衡`,
-      `经期前后可适当增加 100~200 kcal，不必过度克制`
-    ];
-    dietHTML = `
-      <div class="diet-card warn">
-        <div class="diet-title"><span class="icon">&#9888;</span> ${isMale ? '男性' : '女性'}减脂饮食建议</div>
-        <div class="macro-row">
-          <div class="macro-item protein"><div class="val">${proteinG}g</div><div class="lbl">蛋白质</div></div>
-          <div class="macro-item carb"><div class="val">${carbG}g</div><div class="lbl">碳水</div></div>
-          <div class="macro-item fat"><div class="val">${fatG}g</div><div class="lbl">脂肪</div></div>
-        </div>
-        <div class="food-tags">${foods}${avoid}</div>
-        <ul class="diet-tips">${tips.map(t => '<li>' + t + '</li>').join('')}</ul>
-      </div>`;
+    const foods = isMale ? '<span class="food-tag good">鸡胸肉</span><span class="food-tag good">牛肉</span><span class="food-tag good">鱼虾</span><span class="food-tag good">鸡蛋</span><span class="food-tag good">西兰花</span><span class="food-tag good">糙米</span>' : '<span class="food-tag good">鸡胸肉</span><span class="food-tag good">鱼虾</span><span class="food-tag good">菠菜</span><span class="food-tag good">豆腐</span><span class="food-tag good">燕麦</span><span class="food-tag good">红枣</span>';
+    const avoid = isMale ? '<span class="food-tag avoid">啤酒</span><span class="food-tag avoid">炸鸡</span><span class="food-tag avoid">薯片</span><span class="food-tag avoid">白面包</span>' : '<span class="food-tag avoid">奶茶</span><span class="food-tag avoid">蛋糕</span><span class="food-tag avoid">薯片</span><span class="food-tag avoid">冰淇淋</span>';
+    const tips = isMale ? [`每日热量控制在 <b>${targetCal} kcal</b>，比消耗少约 ${Math.round(tdee - targetCal)} kcal`,`蛋白质摄入较高（${proteinG}g），有助于保留肌肉、增强饱腹感`,`减少精制碳水，选择粗粮、薯类`,`烹饪方式优先蒸、煮、烤，避免油炸`,`每餐先吃蔬菜和蛋白质，最后吃主食`,`多喝水（每天 2~3L），避免含糖饮料和酒精`] : [`每日热量控制在 <b>${targetCal} kcal</b>，比消耗少约 ${Math.round(tdee - targetCal)} kcal`,`蛋白质摄入 ${proteinG}g，搭配铁质丰富的食物（菠菜、红肉、黑豆）`,`减脂期间每日热量不低于 1200 kcal，避免影响生理周期`,`选择低 GI 碳水（燕麦、糙米），保持血糖稳定`,`适量摄入健康脂肪（牛油果、坚果），脂肪占比 ${Math.round(fatPct*100)}% 有助于激素平衡`,`经期前后可适当增加 100~200 kcal，不必过度克制`];
+    dietHTML = `<div class="diet-card warn"><div class="diet-title"><span class="icon">&#9888;</span> ${isMale ? '男性' : '女性'}减脂饮食建议</div><div class="macro-row"><div class="macro-item protein"><div class="val">${proteinG}g</div><div class="lbl">蛋白质</div></div><div class="macro-item carb"><div class="val">${carbG}g</div><div class="lbl">碳水</div></div><div class="macro-item fat"><div class="val">${fatG}g</div><div class="lbl">脂肪</div></div></div><div class="food-tags">${foods}${avoid}</div><ul class="diet-tips">${tips.map(t => '<li>' + t + '</li>').join('')}</ul></div>`;
   } else if (goal === 'gain') {
-    const foods = isMale
-      ? `<span class="food-tag good">牛肉</span><span class="food-tag good">鸡蛋</span><span class="food-tag good">牛奶</span>
-         <span class="food-tag good">坚果</span><span class="food-tag good">香蕉</span><span class="food-tag good">牛油果</span>`
-      : `<span class="food-tag good">鸡蛋</span><span class="food-tag good">牛奶</span><span class="food-tag good">三文鱼</span>
-         <span class="food-tag good">坚果</span><span class="food-tag good">牛油果</span><span class="food-tag good">红枣</span>`;
-    const avoid = isMale
-      ? `<span class="food-tag avoid">空热量零食</span><span class="food-tag avoid">碳酸饮料</span>`
-      : `<span class="food-tag avoid">空热量零食</span><span class="food-tag avoid">油炸食品</span>`;
-    const tips = isMale ? [
-      `每日热量达到 <b>${targetCal} kcal</b>，比消耗多约 ${Math.round(targetCal - tdee)} kcal`,
-      `每天 4~5 餐，避免一次吃太多导致消化不良`,
-      `蛋白质充足（${proteinG}g），碳水 ${carbG}g，为肌肉合成提供原料`,
-      `训练后 30 分钟内补充蛋白质 + 碳水（如牛奶 + 香蕉）`,
-      `补锌（牡蛎、牛肉、南瓜子），有助于维持 testosterone 水平`,
-      `配合力量训练，确保增的是肌肉而非脂肪`
-    ] : [
-      `每日热量达到 <b>${targetCal} kcal</b>，比消耗多约 ${Math.round(targetCal - tdee)} kcal`,
-      `每天 4~5 餐，少食多餐更容易消化吸收`,
-      `蛋白质 ${proteinG}g，搭配富含铁和钙的食物`,
-      `选择营养密度高的食物（三文鱼、鸡蛋、坚果），而非空热量`,
-      `适量健康脂肪（${fatG}g，占比 ${Math.round(fatPct*100)}%），支持激素分泌`,
-      `配合力量训练塑形，增重同时保持体态匀称`
-    ];
-    dietHTML = `
-      <div class="diet-card">
-        <div class="diet-title"><span class="icon">&#127860;</span> ${isMale ? '男性' : '女性'}增重饮食建议</div>
-        <div class="macro-row">
-          <div class="macro-item protein"><div class="val">${proteinG}g</div><div class="lbl">蛋白质</div></div>
-          <div class="macro-item carb"><div class="val">${carbG}g</div><div class="lbl">碳水</div></div>
-          <div class="macro-item fat"><div class="val">${fatG}g</div><div class="lbl">脂肪</div></div>
-        </div>
-        <div class="food-tags">${foods}${avoid}</div>
-        <ul class="diet-tips">${tips.map(t => '<li>' + t + '</li>').join('')}</ul>
-      </div>`;
+    const foods = isMale ? '<span class="food-tag good">牛肉</span><span class="food-tag good">鸡蛋</span><span class="food-tag good">牛奶</span><span class="food-tag good">坚果</span><span class="food-tag good">香蕉</span><span class="food-tag good">牛油果</span>' : '<span class="food-tag good">鸡蛋</span><span class="food-tag good">牛奶</span><span class="food-tag good">三文鱼</span><span class="food-tag good">坚果</span><span class="food-tag good">牛油果</span><span class="food-tag good">红枣</span>';
+    const avoid = isMale ? '<span class="food-tag avoid">空热量零食</span><span class="food-tag avoid">碳酸饮料</span>' : '<span class="food-tag avoid">空热量零食</span><span class="food-tag avoid">油炸食品</span>';
+    const tips = isMale ? [`每日热量达到 <b>${targetCal} kcal</b>，比消耗多约 ${Math.round(targetCal - tdee)} kcal`,`每天 4~5 餐，避免一次吃太多`,`蛋白质充足（${proteinG}g），碳水 ${carbG}g，为肌肉合成提供原料`,`训练后 30 分钟内补充蛋白质 + 碳水（如牛奶 + 香蕉）`,`补锌（牡蛎、牛肉、南瓜子），有助于维持 testosterone 水平`,`配合力量训练，确保增的是肌肉而非脂肪`] : [`每日热量达到 <b>${targetCal} kcal</b>，比消耗多约 ${Math.round(targetCal - tdee)} kcal`,`每天 4~5 餐，少食多餐更容易消化吸收`,`蛋白质 ${proteinG}g，搭配富含铁和钙的食物`,`选择营养密度高的食物（三文鱼、鸡蛋、坚果），而非空热量`,`适量健康脂肪（${fatG}g，占比 ${Math.round(fatPct*100)}%），支持激素分泌`,`配合力量训练塑形，增重同时保持体态匀称`];
+    dietHTML = `<div class="diet-card"><div class="diet-title"><span class="icon">&#127860;</span> ${isMale ? '男性' : '女性'}增重饮食建议</div><div class="macro-row"><div class="macro-item protein"><div class="val">${proteinG}g</div><div class="lbl">蛋白质</div></div><div class="macro-item carb"><div class="val">${carbG}g</div><div class="lbl">碳水</div></div><div class="macro-item fat"><div class="val">${fatG}g</div><div class="lbl">脂肪</div></div></div><div class="food-tags">${foods}${avoid}</div><ul class="diet-tips">${tips.map(t => '<li>' + t + '</li>').join('')}</ul></div>`;
   } else {
-    const foods = isMale
-      ? `<span class="food-tag good">鱼肉</span><span class="food-tag good">鸡胸肉</span><span class="food-tag good">豆制品</span>
-         <span class="food-tag good">蔬菜</span><span class="food-tag good">全谷物</span><span class="food-tag good">坚果</span>`
-      : `<span class="food-tag good">鱼肉</span><span class="food-tag good">豆腐</span><span class="food-tag good">菠菜</span>
-         <span class="food-tag good">水果</span><span class="food-tag good">酸奶</span><span class="food-tag good">坚果</span>`;
-    const avoid = isMale
-      ? `<span class="food-tag avoid">过度加工食品</span><span class="food-tag avoid">高糖饮料</span>`
-      : `<span class="food-tag avoid">过度加工食品</span><span class="food-tag avoid">高糖甜品</span>`;
-    const tips = isMale ? [
-      `每日热量维持在 <b>${targetCal} kcal</b> 左右`,
-      `三餐规律，早餐不可省略`,
-      `每天摄入 300~500g 蔬菜，200~350g 水果`,
-      `每周吃 2~3 次鱼类，补充优质蛋白和 Omega-3`,
-      `补锌（牡蛎、牛肉）和维生素 D（晒太阳），维持身体机能`,
-      `控制盐（&lt;5g/天）和油（&lt;25g/天）的摄入`
-    ] : [
-      `每日热量维持在 <b>${targetCal} kcal</b> 左右`,
-      `三餐规律，早餐不可省略，可搭配酸奶和水果`,
-      `每天摄入 300~500g 蔬菜，200~350g 水果`,
-      `补铁（红肉、菠菜、黑豆）和补钙（牛奶、豆腐），女性需求更高`,
-      `适量摄入大豆制品，含天然植物雌激素，有益健康`,
-      `控制盐（&lt;5g/天）和油（&lt;25g/天）的摄入`
-    ];
-    dietHTML = `
-      <div class="diet-card">
-        <div class="diet-title"><span class="icon">&#9989;</span> ${isMale ? '男性' : '女性'}均衡饮食建议</div>
-        <div class="macro-row">
-          <div class="macro-item protein"><div class="val">${proteinG}g</div><div class="lbl">蛋白质</div></div>
-          <div class="macro-item carb"><div class="val">${carbG}g</div><div class="lbl">碳水</div></div>
-          <div class="macro-item fat"><div class="val">${fatG}g</div><div class="lbl">脂肪</div></div>
-        </div>
-        <div class="food-tags">${foods}${avoid}</div>
-        <ul class="diet-tips">${tips.map(t => '<li>' + t + '</li>').join('')}</ul>
-      </div>`;
+    const foods = isMale ? '<span class="food-tag good">鱼肉</span><span class="food-tag good">鸡胸肉</span><span class="food-tag good">豆制品</span><span class="food-tag good">蔬菜</span><span class="food-tag good">全谷物</span><span class="food-tag good">坚果</span>' : '<span class="food-tag good">鱼肉</span><span class="food-tag good">豆腐</span><span class="food-tag good">菠菜</span><span class="food-tag good">水果</span><span class="food-tag good">酸奶</span><span class="food-tag good">坚果</span>';
+    const avoid = isMale ? '<span class="food-tag avoid">过度加工食品</span><span class="food-tag avoid">高糖饮料</span>' : '<span class="food-tag avoid">过度加工食品</span><span class="food-tag avoid">高糖甜品</span>';
+    const tips = isMale ? [`每日热量维持在 <b>${targetCal} kcal</b> 左右`,`三餐规律，早餐不可省略`,`每天摄入 300~500g 蔬菜，200~350g 水果`,`每周吃 2~3 次鱼类，补充优质蛋白和 Omega-3`,`补锌（牡蛎、牛肉）和维生素 D（晒太阳），维持身体机能`,`控制盐（&lt;5g/天）和油（&lt;25g/天）的摄入`] : [`每日热量维持在 <b>${targetCal} kcal</b> 左右`,`三餐规律，早餐不可省略，可搭配酸奶和水果`,`每天摄入 300~500g 蔬菜，200~350g 水果`,`补铁（红肉、菠菜、黑豆）和补钙（牛奶、豆腐），女性需求更高`,`适量摄入大豆制品，含天然植物雌激素，有益健康`,`控制盐（&lt;5g/天）和油（&lt;25g/天）的摄入`];
+    dietHTML = `<div class="diet-card"><div class="diet-title"><span class="icon">&#9989;</span> ${isMale ? '男性' : '女性'}均衡饮食建议</div><div class="macro-row"><div class="macro-item protein"><div class="val">${proteinG}g</div><div class="lbl">蛋白质</div></div><div class="macro-item carb"><div class="val">${carbG}g</div><div class="lbl">碳水</div></div><div class="macro-item fat"><div class="val">${fatG}g</div><div class="lbl">脂肪</div></div></div><div class="food-tags">${foods}${avoid}</div><ul class="diet-tips">${tips.map(t => '<li>' + t + '</li>').join('')}</ul></div>`;
   }
   dietSection.innerHTML = dietHTML;
 
-  // Save to history
   saveRecord({ date: new Date().toLocaleString('zh-CN'), bmi: +bmi.toFixed(1), bf: +bfClamped.toFixed(1), tdee: Math.round(tdee), whr: (waist && hip) ? +(waist/hip).toFixed(2) : null, weight: w, height: h, age: a, gender });
 }
-
-// History
-function getHistory() { try { return JSON.parse(localStorage.getItem('bmi_history') || '[]'); } catch { return []; } }
-function saveRecord(r) { const h = getHistory(); h.unshift(r); if (h.length > 100) h.length = 100; localStorage.setItem('bmi_history', JSON.stringify(h)); }
-
-function renderHistory() {
-  const list = document.getElementById('historyList');
-  const data = getHistory();
-  if (!data.length) { list.innerHTML = '<div class="empty-msg">暂无记录</div>'; drawChart([]); return; }
-  list.innerHTML = data.map((r, i) =>
-    `<div class="history-item"><div class="info"><div class="date">${r.date}</div><div class="stats">BMI ${r.bmi} | 体脂 ${r.bf}% | TDEE ${r.tdee} kcal${r.whr ? ' | WHR ' + r.whr : ''}</div></div><button class="del-btn" onclick="delRecord(${i})">&times;</button></div>`
-  ).join('');
-  drawChart(data);
-}
-
-function delRecord(i) {
-  const h = getHistory(); h.splice(i, 1); localStorage.setItem('bmi_history', JSON.stringify(h)); renderHistory();
-}
-function clearHistory() {
-  if (!confirm('确定清空所有记录？')) return;
-  localStorage.removeItem('bmi_history'); renderHistory();
-}
-function exportData() {
-  const data = getHistory();
-  if (!data.length) return alert('暂无数据');
-  const csv = '日期,BMI,体脂率,TDEE,腰臀比,体重,身高,年龄,性别\n' +
-    data.map(r => `${r.date},${r.bmi},${r.bf},${r.tdee},${r.whr||''},${r.weight},${r.height},${r.age},${r.gender==='male'?'男':'女'}`).join('\n');
-  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'bmi_records.csv'; a.click();
-}
-
-// Canvas chart
-function drawChart(data) {
-  const canvas = document.getElementById('trendChart');
-  const ctx = canvas.getContext('2d');
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = canvas.offsetWidth * dpr;
-  canvas.height = 200 * dpr;
-  ctx.scale(dpr, dpr);
-  const W = canvas.offsetWidth, H = 200;
-  ctx.clearRect(0, 0, W, H);
-
-  if (data.length < 2) {
-    ctx.fillStyle = '#ccc'; ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('至少需要 2 条记录才能显示趋势图', W / 2, H / 2);
-    return;
-  }
-
-  const points = data.slice(0, 30).reverse();
-  const pad = { t: 20, r: 20, b: 30, l: 40 };
-  const cw = W - pad.l - pad.r, ch = H - pad.t - pad.b;
-
-  const bmiMin = Math.min(...points.map(p => p.bmi)) - 2;
-  const bmiMax = Math.max(...points.map(p => p.bmi)) + 2;
-  const bfMin = Math.min(...points.map(p => p.bf)) - 3;
-  const bfMax = Math.max(...points.map(p => p.bf)) + 3;
-
-  function x(i) { return pad.l + (i / (points.length - 1)) * cw; }
-  function yBmi(v) { return pad.t + (1 - (v - bmiMin) / (bmiMax - bmiMin)) * ch; }
-  function yBf(v) { return pad.t + (1 - (v - bfMin) / (bfMax - bfMin)) * ch; }
-
-  // Grid
-  ctx.strokeStyle = '#eee'; ctx.lineWidth = 1;
-  for (let i = 0; i <= 4; i++) {
-    const yy = pad.t + (i / 4) * ch;
-    ctx.beginPath(); ctx.moveTo(pad.l, yy); ctx.lineTo(W - pad.r, yy); ctx.stroke();
-  }
-
-  // X labels
-  ctx.fillStyle = '#bbb'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
-  const step = Math.max(1, Math.floor(points.length / 6));
-  for (let i = 0; i < points.length; i += step) {
-    ctx.fillText(points[i].date.slice(5, 10), x(i), H - 8);
-  }
-
-  // BMI line
-  ctx.strokeStyle = '#667eea'; ctx.lineWidth = 2; ctx.beginPath();
-  points.forEach((p, i) => { i === 0 ? ctx.moveTo(x(i), yBmi(p.bmi)) : ctx.lineTo(x(i), yBmi(p.bmi)); });
-  ctx.stroke();
-  points.forEach((p, i) => { ctx.fillStyle = '#667eea'; ctx.beginPath(); ctx.arc(x(i), yBmi(p.bmi), 3, 0, Math.PI * 2); ctx.fill(); });
-
-  // BF line
-  ctx.strokeStyle = '#ef5350'; ctx.lineWidth = 2; ctx.beginPath();
-  points.forEach((p, i) => { i === 0 ? ctx.moveTo(x(i), yBf(p.bf)) : ctx.lineTo(x(i), yBf(p.bf)); });
-  ctx.stroke();
-  points.forEach((p, i) => { ctx.fillStyle = '#ef5350'; ctx.beginPath(); ctx.arc(x(i), yBf(p.bf), 3, 0, Math.PI * 2); ctx.fill(); });
-
-  // Y axis labels
-  ctx.fillStyle = '#667eea'; ctx.font = '10px sans-serif'; ctx.textAlign = 'right';
-  for (let i = 0; i <= 4; i++) { const v = bmiMin + (1 - i / 4) * (bmiMax - bmiMin); ctx.fillText(v.toFixed(1), pad.l - 4, pad.t + (i / 4) * ch + 4); }
-  ctx.fillStyle = '#ef5350'; ctx.textAlign = 'left';
-  for (let i = 0; i <= 4; i++) { const v = bfMin + (1 - i / 4) * (bfMax - bfMin); ctx.fillText(v.toFixed(1) + '%', W - pad.r + 4, pad.t + (i / 4) * ch + 4); }
-}
-
-// Period Calendar
-const SYMPTOMS = ['痛经','头痛','疲劳','情绪波动','腰酸','食欲变化','乳房胀痛','失眠'];
-const MOODS = ['😊 正常','😔 低落','😤 烦躁','😴 嗜睡','🥰 愉快'];
-let calYear, calMonth, selectedDate = null, periodStart = null;
-
-function getPeriodData() {
-  try { return JSON.parse(localStorage.getItem('period_data') || '{"periods":[],"symptoms":{}}'); }
-  catch { return { periods: [], symptoms: {} }; }
-}
-function savePeriodData(d) { localStorage.setItem('period_data', JSON.stringify(d)); }
-
-function initCal() {
-  const now = new Date();
-  calYear = now.getFullYear();
-  calMonth = now.getMonth();
-}
-
-function calNav(dir) {
-  calMonth += dir;
-  if (calMonth < 0) { calMonth = 11; calYear--; }
-  if (calMonth > 11) { calMonth = 0; calYear++; }
-  renderCalendar();
-}
-
-function renderCalendar() {
-  const data = getPeriodData();
-  const periodSet = new Set(data.periods);
-  const today = new Date();
-  const todayStr = fmt(today);
-
-  document.getElementById('calMonth').textContent = `${calYear}年${calMonth + 1}月`;
-  document.getElementById('calHint').textContent = periodStart ? `已选开始日 ${periodStart}，请点击结束日` : '点击日期标记经期开始日，再点结束日自动填充';
-
-  const first = new Date(calYear, calMonth, 1);
-  const last = new Date(calYear, calMonth + 1, 0);
-  const startDay = first.getDay();
-
-  // Get predictions
-  const predictions = getPredictions(data);
-  const predSet = new Set(predictions.predicted);
-  const ovuSet = new Set(predictions.ovulation);
-
-  let html = '';
-  for (let i = 0; i < startDay; i++) html += '<div class="cal-day empty"></div>';
-  for (let d = 1; d <= last.getDate(); d++) {
-    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    let cls = 'cal-day';
-    if (dateStr === todayStr) cls += ' today';
-    if (periodSet.has(dateStr)) cls += ' period';
-    else if (predSet.has(dateStr)) cls += ' predicted';
-    if (ovuSet.has(dateStr)) cls += ' ovulation';
-    if (data.symptoms[dateStr]) cls += ' symptom-dot';
-    if (periodStart === dateStr) cls += ' period-start';
-    html += `<div class="${cls}" onclick="togglePeriod('${dateStr}')"><span class="day-num">${d}</span></div>`;
-  }
-  document.getElementById('calGrid').innerHTML = html;
-
-  // Stats
-  const stats = getStats(data);
-  const nextPeriod = predictions.nextPeriod;
-  const daysUntil = nextPeriod ? Math.ceil((new Date(nextPeriod) - today) / 86400000) : null;
-  const monthPrefix = `${calYear}-${String(calMonth+1).padStart(2,'0')}`;
-  const monthDays = data.periods.filter(d => d.startsWith(monthPrefix)).length;
-  document.getElementById('calStats').innerHTML = `
-    <div class="stats-card"><div class="val">${stats.avgCycle || '--'}</div><div class="lbl">平均周期（天）</div></div>
-    <div class="stats-card"><div class="val">${stats.avgDuration || '--'}</div><div class="lbl">平均经期（天）</div></div>
-    <div class="stats-card"><div class="val">${monthDays}</div><div class="lbl">本月经期（天）</div></div>
-    <div class="stats-card"><div class="val">${daysUntil !== null && daysUntil >= 0 ? daysUntil + '天' : '--'}</div><div class="lbl">距下次经期</div></div>
-  `;
-
-  // Phase advice
-  renderPhaseAdvice(data, predictions, today);
-}
-
-function fmt(d) {
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-}
-
-function togglePeriod(dateStr) {
-  const data = getPeriodData();
-
-  // If clicking an existing period day, remove it
-  if (data.periods.includes(dateStr)) {
-    data.periods = data.periods.filter(d => d !== dateStr);
-    periodStart = null;
-    selectedDate = null;
-    document.getElementById('symptomPanel').classList.remove('show');
-    savePeriodData(data);
-    renderCalendar();
-    return;
-  }
-
-  // First click: set start
-  if (!periodStart) {
-    periodStart = dateStr;
-    renderCalendar();
-    return;
-  }
-
-  // Second click: fill range from start to this date
-  const start = new Date(periodStart);
-  const end = new Date(dateStr);
-  if (end < start) { start.setTime(end.getTime()); end.setTime(new Date(periodStart).getTime()); }
-  const d = new Date(start);
-  while (d <= end) {
-    const ds = fmt(d);
-    if (!data.periods.includes(ds)) data.periods.push(ds);
-    d.setDate(d.getDate() + 1);
-  }
-  data.periods.sort();
-  periodStart = null;
-  savePeriodData(data);
-  renderCalendar();
-}
-
-function getPeriodGroups(data) {
-  if (!data.periods.length) return [];
-  const sorted = [...data.periods].sort();
-  const groups = [[sorted[0]]];
-  for (let i = 1; i < sorted.length; i++) {
-    const prev = new Date(sorted[i-1]);
-    const curr = new Date(sorted[i]);
-    const diff = (curr - prev) / 86400000;
-    if (diff <= 2) groups[groups.length - 1].push(sorted[i]);
-    else groups.push([sorted[i]]);
-  }
-  return groups;
-}
-
-function getStats(data) {
-  const groups = getPeriodGroups(data);
-  if (groups.length < 2) {
-    const avgDuration = groups.length ? groups[0].length : null;
-    return { avgCycle: null, avgDuration };
-  }
-  const cycles = [];
-  for (let i = 1; i < groups.length; i++) {
-    const diff = (new Date(groups[i][0]) - new Date(groups[i-1][0])) / 86400000;
-    if (diff > 15 && diff < 60) cycles.push(diff);
-  }
-  const durations = groups.map(g => g.length);
-  return {
-    avgCycle: cycles.length ? Math.round(cycles.reduce((a,b) => a+b, 0) / cycles.length) : null,
-    avgDuration: Math.round(durations.reduce((a,b) => a+b, 0) / durations.length)
-  };
-}
-
-function getPredictions(data) {
-  const groups = getPeriodGroups(data);
-  const stats = getStats(data);
-  const result = { predicted: [], ovulation: [], nextPeriod: null };
-  if (!groups.length || !stats.avgCycle) return result;
-
-  const lastStart = new Date(groups[groups.length - 1][0]);
-  const nextStart = new Date(lastStart);
-  nextStart.setDate(nextStart.getDate() + stats.avgCycle);
-  result.nextPeriod = fmt(nextStart);
-
-  // Predict next 3 periods
-  for (let p = 0; p < 3; p++) {
-    const pStart = new Date(lastStart);
-    pStart.setDate(pStart.getDate() + stats.avgCycle * (p + 1));
-    for (let d = 0; d < (stats.avgDuration || 5); d++) {
-      const dd = new Date(pStart);
-      dd.setDate(dd.getDate() + d);
-      result.predicted.push(fmt(dd));
-    }
-    // Ovulation: ~14 days before next period start
-    const ovu = new Date(pStart);
-    ovu.setDate(ovu.getDate() - 14);
-    for (let d = -1; d <= 1; d++) {
-      const od = new Date(ovu);
-      od.setDate(od.getDate() + d);
-      result.ovulation.push(fmt(od));
-    }
-  }
-  return result;
-}
-
-function showSymptomPanel(dateStr, data) {
-  const panel = document.getElementById('symptomPanel');
-  panel.classList.add('show');
-  document.getElementById('symDate').textContent = dateStr + ' 症状记录';
-
-  const record = data.symptoms[dateStr] || { symptoms: [], mood: '' };
-
-  document.getElementById('symTags').innerHTML = SYMPTOMS.map(s =>
-    `<span class="sym-tag ${record.symptoms.includes(s) ? 'active' : ''}" onclick="this.classList.toggle('active')">${s}</span>`
-  ).join('');
-  document.getElementById('moodTags').innerHTML = MOODS.map(m =>
-    `<span class="sym-tag mood ${record.mood === m ? 'active' : ''}" onclick="toggleMood(this,'${m}')">${m}</span>`
-  ).join('');
-
-  panel._dateStr = dateStr;
-}
-
-function toggleMood(el, mood) {
-  el.parentElement.querySelectorAll('.sym-tag').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-}
-
-function saveSymptom() {
-  const panel = document.getElementById('symptomPanel');
-  const dateStr = panel._dateStr;
-  const data = getPeriodData();
-  const symptoms = [];
-  document.getElementById('symTags').querySelectorAll('.sym-tag.active').forEach(t => symptoms.push(t.textContent));
-  const moodEl = document.getElementById('moodTags').querySelector('.sym-tag.active');
-  const mood = moodEl ? moodEl.textContent : '';
-  if (symptoms.length || mood) {
-    data.symptoms[dateStr] = { symptoms, mood };
-  } else {
-    delete data.symptoms[dateStr];
-  }
-  savePeriodData(data);
-  renderCalendar();
-  panel.classList.remove('show');
-}
-
-function renderPhaseAdvice(data, predictions, today) {
-  const container = document.getElementById('phaseAdvice');
-  const groups = getPeriodGroups(data);
-  if (!groups.length || !predictions.nextPeriod) {
-    container.innerHTML = '<div style="text-align:center;color:#bbb;font-size:.82em;padding:16px">标记经期日后显示阶段建议</div>';
-    return;
-  }
-
-  const stats = getStats(data);
-  const cycle = stats.avgCycle || 28;
-  const lastStart = new Date(groups[groups.length - 1][0]);
-  const dayInCycle = Math.floor((today - lastStart) / 86400000) + 1;
-
-  let phase, cls, icon, title, advice;
-  if (dayInCycle <= (stats.avgDuration || 5)) {
-    phase = 'period'; cls = 'phase-period'; icon = '🩸';
-    title = '经期（第' + dayInCycle + '天）';
-    advice = '<b>饮食：</b>多吃红肉、菠菜、红枣等补铁食物，喝温热的红糖姜茶，避免生冷食物和冷饮。<br><b>运动：</b>轻度运动为主，如散步、拉伸、瑜伽，避免高强度训练和倒立动作。<br><b>注意：</b>保证充足睡眠，注意保暖，可热敷缓解痛经。';
-  } else if (dayInCycle <= cycle - 14 - 4) {
-    phase = 'follicular'; cls = 'phase-follicular'; icon = '🌱';
-    title = '卵泡期（第' + dayInCycle + '天）';
-    advice = '<b>饮食：</b>高蛋白饮食（鸡胸肉、鱼虾、鸡蛋），补充绿叶蔬菜和全谷物，这是减脂的黄金时期。<br><b>运动：</b>有氧运动效果最佳，可安排跑步、游泳、HIIT，体能和恢复能力处于高峰。<br><b>注意：</b>精力充沛，适合安排高强度工作和运动。';
-  } else if (dayInCycle <= cycle - 14 + 2) {
-    phase = 'ovulation'; cls = 'phase-ovulation'; icon = '🥚';
-    title = '排卵期（第' + dayInCycle + '天）';
-    advice = '<b>饮食：</b>补充维生素 E（坚果、牛油果）和 Omega-3（深海鱼），多吃十字花科蔬菜。<br><b>运动：</b>运动量可适当加大，力量训练效果好，但注意不要过度疲劳。<br><b>注意：</b>体温可能略升高，分泌物增多属正常现象。';
-  } else {
-    phase = 'luteal'; cls = 'phase-luteal'; icon = '🌙';
-    title = '黄体期（第' + dayInCycle + '天）';
-    advice = '<b>饮食：</b>补充钙和镁（牛奶、香蕉、深色蔬菜），控制食欲，少吃高糖高盐食物，可适当吃黑巧克力。<br><b>运动：</b>选择舒缓运动（瑜伽、游泳、快走），避免过度刺激。<br><b>注意：</b>可能出现 PMS 症状（情绪波动、水肿），保持规律作息，减少咖啡因摄入。';
-  }
-  container.innerHTML = `<div class="phase-card ${cls}"><div class="phase-title">${icon} ${title}</div>${advice}</div>`;
-}
-
-// Init calendar
-initCal();
-
 document.addEventListener('keydown', e => { if (e.key === 'Enter') calculate(); });
 </script>
 </body>
