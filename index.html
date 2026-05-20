@@ -656,9 +656,12 @@ function renderCalendar() {
   const stats = getStats(data);
   const nextPeriod = predictions.nextPeriod;
   const daysUntil = nextPeriod ? Math.ceil((new Date(nextPeriod) - today) / 86400000) : null;
+  const monthPrefix = `${calYear}-${String(calMonth+1).padStart(2,'0')}`;
+  const monthDays = data.periods.filter(d => d.startsWith(monthPrefix)).length;
   document.getElementById('calStats').innerHTML = `
     <div class="stats-card"><div class="val">${stats.avgCycle || '--'}</div><div class="lbl">平均周期（天）</div></div>
-    <div class="stats-card"><div class="val">${stats.avgDuration || '--'}</div><div class="lbl">经期天数</div></div>
+    <div class="stats-card"><div class="val">${stats.avgDuration || '--'}</div><div class="lbl">平均经期（天）</div></div>
+    <div class="stats-card"><div class="val">${monthDays}</div><div class="lbl">本月经期（天）</div></div>
     <div class="stats-card"><div class="val">${daysUntil !== null && daysUntil >= 0 ? daysUntil + '天' : '--'}</div><div class="lbl">距下次经期</div></div>
   `;
 
