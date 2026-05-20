@@ -6,6 +6,7 @@
 <title>健康助手 - AI 智能分析</title>
 <link rel="stylesheet" href="style.css">
 <script src="config.js"></script>
+<script src="knowledge.js"></script>
 </head>
 <body>
 <nav>
@@ -45,61 +46,7 @@
 </div>
 
 <script>
-const SYSTEM_PROMPT = `你是一位专业的健康管理师和营养师，具备医学、营养学、运动科学和女性健康领域的深厚知识。请根据用户提供的身体数据，生成一份专业、详细、个性化的健康分析报告。
-
-## 你的知识库
-
-### BMI 分级标准（中国/亚洲）
-- 偏瘦：<18.5（营养不良风险、骨质疏松风险增加）
-- 正常：18.5~23.9（健康体重范围）
-- 偏胖：24~27.9（超重，慢性病风险增加）
-- 肥胖：≥28（肥胖症，需干预）
-
-### 体脂率标准
-- 男性：偏瘦<15%、正常15%~20%、偏胖20%~25%、肥胖≥25%
-- 女性：偏瘦<20%、正常20%~25%、偏胖25%~30%、肥胖≥30%
-- 内脏脂肪过多（腰臀比男性≥0.90、女性≥0.80）与代谢综合征密切相关
-
-### 腰臀比（WHR）风险评估
-- 男性：正常<0.90、中等风险0.90~0.99、高风险≥1.00
-- 女性：正常<0.80、中等风险0.80~0.84、高风险≥0.85
-- 腹型肥胖是心血管疾病、2型糖尿病的独立危险因素
-
-### 基础代谢率（BMR）与 TDEE
-- Mifflin-St Jeor 公式计算
-- TDEE = BMR × 活动系数
-- 减脂需创造 20%~25% 热量缺口
-- 增肌需创造 10%~15% 热量盈余
-
-### 营养学知识
-- 蛋白质：减脂期 1.6~2.2g/kg，增肌期 1.6~2.0g/kg，维持期 1.2~1.5g/kg
-- 脂肪：占总热量 20%~35%（女性建议偏高 25%~30% 以维持激素平衡）
-- 碳水：剩余热量，优先选择低 GI 食物
-- 膳食纤维：25~30g/天
-- 钙：800~1000mg/天（女性经期需额外补充）
-- 铁：男性 12mg/天，女性 20mg/天（经期损失需补充）
-- 维生素 D：10~20μg/天
-
-### 运动科学
-- 有氧运动：心率 60%~80% 最大心率，燃脂效率最高
-- 力量训练：增加肌肉量，提高基础代谢
-- 运动频率：WHO 建议每周 150 分钟中等强度或 75 分钟高强度
-- 经期适配：经期轻度运动（瑜伽/散步），卵泡期可高强度，黄体期适度降低
-
-### 月经周期知识（女性用户）
-- 正常周期：21~35 天，平均 28 天
-- 正常经期：3~7 天
-- 四个阶段：月经期（1~5天）、卵泡期（6~13天）、排卵期（14天附近）、黄体期（15~28天）
-- 异常信号：周期<21天或>35天、经期>7天、经量突然变化、严重痛经
-- 周期与运动/营养的关系
-- PMS（经前综合征）的管理
-
-### 常见健康风险
-- BMI 过高：心血管疾病、2型糖尿病、脂肪肝、关节损伤、睡眠呼吸暂停
-- BMI 过低：骨质疏松、免疫力下降、贫血、月经紊乱
-- 体脂过高：代谢综合征、某些癌症风险增加
-- 腰臀比过高：内脏脂肪堆积，心脑血管风险显著增加
-- 周期不规律：多囊卵巢综合征、甲状腺功能异常、压力过大
+const SYSTEM_PROMPT = `你是一位专业的健康管理师和营养师，具备医学、营养学、运动科学和女性健康领域的深厚知识。请根据用户提供的身体数据和相关的健康知识参考，生成一份专业、详细、个性化的健康分析报告。
 
 ## 输出要求
 1. 使用中文
@@ -127,6 +74,44 @@ function buildPrompt(data) {
   if (!latest) return null;
 
   const isMale = latest.gender === 'male';
+
+  // Build user data object for RAG matching
+  const userData = {
+    gender: latest.gender,
+    bmi: latest.bmi,
+    bf: latest.bf,
+    whr: latest.whr || null,
+    tdee: latest.tdee,
+    age: latest.age,
+    weight: latest.weight,
+    height: latest.height,
+    hasPeriod: !isMale && data.period.periods && data.period.periods.length > 0
+  };
+
+  // Compute avgCycle for period matching
+  if (userData.hasPeriod) {
+    const periods = [...data.period.periods].sort();
+    const groups = [];
+    let current = [periods[0]];
+    for (let i = 1; i < periods.length; i++) {
+      const diff = (new Date(periods[i]) - new Date(periods[i-1])) / 86400000;
+      if (diff <= 2) current.push(periods[i]);
+      else { groups.push(current); current = [periods[i]]; }
+    }
+    groups.push(current);
+    if (groups.length >= 2) {
+      const cycles = [];
+      for (let i = 1; i < groups.length; i++) {
+        const diff = (new Date(groups[i][0]) - new Date(groups[i-1][0])) / 86400000;
+        if (diff > 15 && diff < 60) cycles.push(diff);
+      }
+      if (cycles.length) userData.avgCycle = Math.round(cycles.reduce((a,b) => a+b, 0) / cycles.length);
+    }
+  }
+
+  // RAG: retrieve relevant knowledge
+  const relevantKnowledge = retrieveKnowledge(userData);
+
   let prompt = `## 用户身体数据\n`;
   prompt += `- 性别：${isMale ? '男' : '女'}\n`;
   prompt += `- 身高：${latest.height} cm\n`;
@@ -199,7 +184,8 @@ function buildPrompt(data) {
     }
   }
 
-  prompt += `\n请根据以上数据，结合你的健康知识库，生成一份专业、详细、个性化的健康分析报告。`;
+  prompt += `\n## 相关健康知识参考（根据你的数据自动匹配）\n${relevantKnowledge}\n`;
+  prompt += `\n请根据以上数据和参考知识，生成一份专业、详细、个性化的健康分析报告。`;
   return prompt;
 }
 
