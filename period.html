@@ -187,24 +187,34 @@ function getPredictions(data) {
   const stats = getStats(data);
   const result = { predicted: [], ovulation: [], nextPeriod: null };
   if (!groups.length || !stats.avgCycle) return result;
+
+  const today = new Date();
+  today.setHours(0,0,0,0);
   const lastStart = new Date(groups[groups.length - 1][0]);
-  const nextStart = new Date(lastStart);
-  nextStart.setDate(nextStart.getDate() + stats.avgCycle);
+
+  // Find the next future period
+  let nextStart = new Date(lastStart);
+  while (nextStart <= today) {
+    nextStart.setDate(nextStart.getDate() + stats.avgCycle);
+  }
   result.nextPeriod = fmt(nextStart);
+
+  // Predict next 3 future periods
   for (let p = 0; p < 3; p++) {
     const pStart = new Date(lastStart);
     pStart.setDate(pStart.getDate() + stats.avgCycle * (p + 1));
+    if (pStart <= today) continue;
     for (let d = 0; d < (stats.avgDuration || 5); d++) {
       const dd = new Date(pStart);
       dd.setDate(dd.getDate() + d);
-      result.predicted.push(fmt(dd));
+      if (dd > today) result.predicted.push(fmt(dd));
     }
     const ovu = new Date(pStart);
     ovu.setDate(ovu.getDate() - 14);
     for (let d = -1; d <= 1; d++) {
       const od = new Date(ovu);
       od.setDate(od.getDate() + d);
-      result.ovulation.push(fmt(od));
+      if (od > today) result.ovulation.push(fmt(od));
     }
   }
   return result;
