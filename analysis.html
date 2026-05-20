@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>健康助手 - AI 智能分析</title>
+<link rel="stylesheet" href="style.css">
+<script src="config.js"></script>
+</head>
+<body>
+<nav>
+  <a href="index.html" class="logo">健康助手</a>
+  <div class="nav-links">
+    <a href="index.html">身体数据</a>
+    <a href="period.html">经期日历</a>
+    <a href="history.html">历史记录</a>
+    <a href="analysis.html" class="active">AI 分析</a>
+  </div>
+</nav>
+
+<div class="card">
+  <h1>AI 智能分析</h1>
+  <p class="subtitle">基于你的数据生成专业健康报告</p>
+
+  <div id="dataSummary"></div>
+  <button class="gen-btn" id="genBtn" onclick="generateReport()">生成分析报告</button>
+  <div class="report-box" id="reportBox">
+    <div class="empty-state">
+      <div class="icon">&#129504;</div>
+      <p>点击上方按钮，AI 将根据你的身体数据和健康知识库<br>生成个性化的专业健康分析报告</p>
+    </div>
+  </div>
+  <div class="report-actions" id="reportActions" style="display:none">
+    <button class="btn-sm" onclick="copyReport()">复制报告</button>
+    <button class="btn-sm" onclick="downloadReport()">下载为文本</button>
+  </div>
+</div>
+
+<script>
+const SYSTEM_PROMPT = `你是一位专业的健康管理师和营养师，具备医学、营养学、运动科学和女性健康领域的深厚知识。请根据用户提供的身体数据，生成一份专业、详细、个性化的健康分析报告。
+
+## 你的知识库
+
+### BMI 分级标准（中国/亚洲）
+- 偏瘦：<18.5（营养不良风险、骨质疏松风险增加）
+- 正常：18.5~23.9（健康体重范围）
+- 偏胖：24~27.9（超重，慢性病风险增加）
+- 肥胖：≥28（肥胖症，需干预）
+
+### 体脂率标准
+- 男性：偏瘦<15%、正常15%~20%、偏胖20%~25%、肥胖≥25%
+- 女性：偏瘦<20%、正常20%~25%、偏胖25%~30%、肥胖≥30%
+- 内脏脂肪过多（腰臀比男性≥0.90、女性≥0.80）与代谢综合征密切相关
+
+### 腰臀比（WHR）风险评估
+- 男性：正常<0.90、中等风险0.90~0.99、高风险≥1.00
+- 女性：正常<0.80、中等风险0.80~0.84、高风险≥0.85
+- 腹型肥胖是心血管疾病、2型糖尿病的独立危险因素
+
+### 基础代谢率（BMR）与 TDEE
+- Mifflin-St Jeor 公式计算
+- TDEE = BMR × 活动系数
+- 减脂需创造 20%~25% 热量缺口
+- 增肌需创造 10%~15% 热量盈余
+
+### 营养学知识
+- 蛋白质：减脂期 1.6~2.2g/kg，增肌期 1.6~2.0g/kg，维持期 1.2~1.5g/kg
+- 脂肪：占总热量 20%~35%（女性建议偏高 25%~30% 以维持激素平衡）
+- 碳水：剩余热量，优先选择低 GI 食物
+- 膳食纤维：25~30g/天
+- 钙：800~1000mg/天（女性经期需额外补充）
+- 铁：男性 12mg/天，女性 20mg/天（经期损失需补充）
+- 维生素 D：10~20μg/天
+
+### 运动科学
+- 有氧运动：心率 60%~80% 最大心率，燃脂效率最高
+- 力量训练：增加肌肉量，提高基础代谢
+- 运动频率：WHO 建议每周 150 分钟中等强度或 75 分钟高强度
+- 经期适配：经期轻度运动（瑜伽/散步），卵泡期可高强度，黄体期适度降低
+
+### 月经周期知识（女性用户）
+- 正常周期：21~35 天，平均 28 天
+- 正常经期：3~7 天
+- 四个阶段：月经期（1~5天）、卵泡期（6~13天）、排卵期（14天附近）、黄体期（15~28天）
+- 异常信号：周期<21天或>35天、经期>7天、经量突然变化、严重痛经
+- 周期与运动/营养的关系
+- PMS（经前综合征）的管理
+
+### 常见健康风险
+- BMI 过高：心血管疾病、2型糖尿病、脂肪肝、关节损伤、睡眠呼吸暂停
+- BMI 过低：骨质疏松、免疫力下降、贫血、月经紊乱
+- 体脂过高：代谢综合征、某些癌症风险增加
+- 腰臀比过高：内脏脂肪堆积，心脑血管风险显著增加
+- 周期不规律：多囊卵巢综合征、甲状腺功能异常、压力过大
+
+## 输出要求
+1. 使用中文
+2. 使用 Markdown 格式
+3. 结构清晰，包含以下章节：
+   - ## 📊 综合健康评估（整体评分和概述）
+   - ## 🏋️ 体重管理分析（BMI/体脂详细解读+趋势分析）
+   - ## 🍎 营养方案（个性化饮食计划，包含具体食物推荐）
+   - ## 🏃 运动处方（具体运动类型、频率、强度建议）
+   - ## ⚠️ 风险提示（潜在健康风险和预防建议）
+   - 如果有月经数据，增加 ## 🌸 月经周期分析
+4. 语言专业但通俗易懂，像一位耐心的医生在给患者解释
+5. 给出具体可执行的建议，不要泛泛而谈
+6. 如果数据有异常，温和地指出并给出改善方案
+7. 在报告末尾加一段免责声明`;
+
+function getData() {
+  const history = (() => { try { return JSON.parse(localStorage.getItem('bmi_history') || '[]'); } catch { return []; } })();
+  const period = (() => { try { return JSON.parse(localStorage.getItem('period_data') || '{"periods":[],"symptoms":{}}'); } catch { return { periods: [], symptoms: {} }; } })();
+  return { history, period };
+}
+
+function buildPrompt(data) {
+  const latest = data.history[0];
+  if (!latest) return null;
+
+  const isMale = latest.gender === 'male';
+  let prompt = `## 用户身体数据\n`;
+  prompt += `- 性别：${isMale ? '男' : '女'}\n`;
+  prompt += `- 身高：${latest.height} cm\n`;
+  prompt += `- 体重：${latest.weight} kg\n`;
+  prompt += `- 年龄：${latest.age} 岁\n`;
+  prompt += `- BMI：${latest.bmi}\n`;
+  prompt += `- 体脂率：${latest.bf}%\n`;
+  prompt += `- TDEE：${latest.tdee} kcal/天\n`;
+  if (latest.whr) prompt += `- 腰臀比：${latest.whr}\n`;
+  prompt += `- 记录时间：${latest.date}\n`;
+
+  // History trends
+  if (data.history.length >= 2) {
+    const recent = data.history.slice(0, Math.min(10, data.history.length));
+    prompt += `\n## 历史数据趋势（最近 ${recent.length} 次记录）\n`;
+    prompt += `| 日期 | 体重 | BMI | 体脂率 | TDEE |\n|---|---|---|---|---|\n`;
+    recent.reverse().forEach(r => {
+      prompt += `| ${r.date} | ${r.weight}kg | ${r.bmi} | ${r.bf}% | ${r.tdee}kcal |\n`;
+    });
+    const firstW = recent[0].weight;
+    const lastW = recent[recent.length - 1].weight;
+    const wDiff = (lastW - firstW).toFixed(1);
+    prompt += `\n体重变化趋势：${wDiff > 0 ? '增加' : wDiff < 0 ? '减少' : '稳定'} ${Math.abs(wDiff)} kg\n`;
+  }
+
+  // Period data (female)
+  if (!isMale && data.period.periods && data.period.periods.length > 0) {
+    const periods = [...data.period.periods].sort();
+    prompt += `\n## 月经周期数据\n`;
+    prompt += `- 记录的经期天数：共 ${periods.length} 天\n`;
+    prompt += `- 最早记录：${periods[0]}\n`;
+    prompt += `- 最近记录：${periods[periods.length - 1]}\n`;
+
+    // Group periods
+    const groups = [];
+    let current = [periods[0]];
+    for (let i = 1; i < periods.length; i++) {
+      const diff = (new Date(periods[i]) - new Date(periods[i-1])) / 86400000;
+      if (diff <= 2) current.push(periods[i]);
+      else { groups.push(current); current = [periods[i]]; }
+    }
+    groups.push(current);
+
+    if (groups.length >= 2) {
+      prompt += `- 经期次数：${groups.length} 次\n`;
+      const cycles = [];
+      for (let i = 1; i < groups.length; i++) {
+        const diff = (new Date(groups[i][0]) - new Date(groups[i-1][0])) / 86400000;
+        if (diff > 15 && diff < 60) cycles.push(diff);
+      }
+      if (cycles.length) {
+        const avgCycle = Math.round(cycles.reduce((a,b) => a+b, 0) / cycles.length);
+        const avgDuration = Math.round(groups.reduce((a,g) => a + g.length, 0) / groups.length);
+        prompt += `- 平均周期：${avgCycle} 天\n`;
+        prompt += `- 平均经期天数：${avgDuration} 天\n`;
+        prompt += `- 各次周期长度：${cycles.join(', ')} 天\n`;
+        if (cycles.some(c => c < 21 || c > 35)) prompt += `- ⚠️ 存在周期异常（<21天或>35天）\n`;
+      }
+    } else {
+      prompt += `- 经期次数不足 2 次，无法计算周期\n`;
+    }
+
+    // Symptoms
+    const symptomEntries = Object.entries(data.period.symptoms || {});
+    if (symptomEntries.length) {
+      prompt += `\n### 症状记录\n`;
+      symptomEntries.forEach(([date, s]) => {
+        prompt += `- ${date}：${s.symptoms.join('、') || '无症状'}，心情：${s.mood || '未记录'}\n`;
+      });
+    }
+  }
+
+  prompt += `\n请根据以上数据，结合你的健康知识库，生成一份专业、详细、个性化的健康分析报告。`;
+  return prompt;
+}
+
+function renderSummary(data) {
+  const el = document.getElementById('dataSummary');
+  const latest = data.history[0];
+  if (!latest) {
+    el.innerHTML = '<div class="empty-state"><div class="icon">&#128202;</div><p>暂无身体数据，请先去<a href="index.html" style="color:#667eea">首页</a>计算</p></div>';
+    document.getElementById('genBtn').disabled = true;
+    return;
+  }
+
+  let html = '<div class="data-summary">';
+  html += `<span class="label">性别</span> <span class="value">${latest.gender === 'male' ? '男' : '女'}</span><span class="sep">|</span>`;
+  html += `<span class="label">身高</span> <span class="value">${latest.height}cm</span><span class="sep">|</span>`;
+  html += `<span class="label">体重</span> <span class="value">${latest.weight}kg</span><span class="sep">|</span>`;
+  html += `<span class="label">年龄</span> <span class="value">${latest.age}岁</span><br>`;
+  html += `<span class="label">BMI</span> <span class="value">${latest.bmi}</span><span class="sep">|</span>`;
+  html += `<span class="label">体脂率</span> <span class="value">${latest.bf}%</span><span class="sep">|</span>`;
+  html += `<span class="label">TDEE</span> <span class="value">${latest.tdee}kcal</span>`;
+  if (latest.whr) html += `<span class="sep">|</span><span class="label">腰臀比</span> <span class="value">${latest.whr}</span>`;
+  html += `<br><span class="label">历史记录</span> <span class="value">${data.history.length} 条</span>`;
+  if (data.period.periods && data.period.periods.length) {
+    html += `<span class="sep">|</span><span class="label">经期记录</span> <span class="value">${data.period.periods.length} 天</span>`;
+  }
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+let fullReport = '';
+
+async function generateReport() {
+  const btn = document.getElementById('genBtn');
+  const box = document.getElementById('reportBox');
+  const actions = document.getElementById('reportActions');
+
+  if (API_CONFIG.apiKey === '在此填入API Key' || API_CONFIG.baseUrl === '在此填入API地址') {
+    alert('请先在 config.js 中填入 API 地址和 API Key');
+    return;
+  }
+
+  const data = getData();
+  const prompt = buildPrompt(data);
+  if (!prompt) return alert('暂无数据，请先在首页计算身体数据');
+
+  btn.disabled = true;
+  btn.textContent = '正在分析...';
+  actions.style.display = 'none';
+  box.innerHTML = '<div style="text-align:center;padding:40px;color:#888"><div class="loading-dots" style="font-size:1.2em">AI 正在生成分析报告</div><br><span style="font-size:.78em;color:#aaa">这可能需要 10~30 秒</span></div>';
+
+  fullReport = '';
+
+  try {
+    const resp = await fetch(API_CONFIG.baseUrl + '/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + API_CONFIG.apiKey
+      },
+      body: JSON.stringify({
+        model: API_CONFIG.model,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: prompt }
+        ],
+        stream: true
+      })
+    });
+
+    if (!resp.ok) {
+      const errText = await resp.text();
+      throw new Error(`API 请求失败 (${resp.status}): ${errText}`);
+    }
+
+    box.innerHTML = '';
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || !trimmed.startsWith('data:')) continue;
+        const payload = trimmed.slice(5).trim();
+        if (payload === '[DONE]') continue;
+
+        try {
+          const json = JSON.parse(payload);
+          const delta = json.choices?.[0]?.delta?.content;
+          if (delta) {
+            fullReport += delta;
+            box.innerHTML = renderMarkdown(fullReport) + '<span class="typing-cursor"></span>';
+            box.scrollTop = box.scrollHeight;
+          }
+        } catch {}
+      }
+    }
+
+    box.innerHTML = renderMarkdown(fullReport);
+    actions.style.display = 'flex';
+  } catch (err) {
+    box.innerHTML = `<div style="color:#ef5350;padding:20px"><b>请求失败：</b>${err.message}<br><br>请检查：<br>1. config.js 中的 API 地址和 Key 是否正确<br>2. 网络连接是否正常<br>3. API 服务是否可用</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '重新生成报告';
+  }
+}
+
+function renderMarkdown(md) {
+  return md
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')
+    .replace(/<\/ul>\s*<ul>/g, '')
+    .replace(/^\|(.+)\|$/gm, function(match) {
+      const cells = match.split('|').filter(c => c.trim());
+      if (cells.every(c => /^[\s-]+$/.test(c))) return '';
+      return '<tr>' + cells.map(c => '<td>' + c.trim() + '</td>').join('') + '</tr>';
+    })
+    .replace(/(<tr>.*<\/tr>)/gs, '<table style="width:100%;border-collapse:collapse;font-size:.85em;margin:8px 0">$1</table>')
+    .replace(/<\/table>\s*<table[^>]*>/g, '')
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/\n/g, '<br>')
+    .replace(/^(.+)$/gm, function(match) {
+      if (match.startsWith('<h') || match.startsWith('<ul') || match.startsWith('<li') || match.startsWith('<tr') || match.startsWith('<table') || match.startsWith('<blockquote') || match.startsWith('</')) return match;
+      return match;
+    });
+}
+
+function copyReport() {
+  navigator.clipboard.writeText(fullReport).then(() => {
+    alert('报告已复制到剪贴板');
+  });
+}
+
+function downloadReport() {
+  const blob = new Blob([fullReport], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '健康分析报告_' + new Date().toISOString().slice(0, 10) + '.txt';
+  a.click();
+}
+
+// Init
+renderSummary(getData());
+</script>
+</body>
+</html>

@@ -125,3 +125,28 @@ input[type=number]:focus,select:focus{border-color:#667eea}
 .phase-card.phase-ovulation{background:linear-gradient(135deg,#e3f2fd,#bbdefb);border-left:4px solid #2196f3}
 .phase-card.phase-luteal{background:linear-gradient(135deg,#fff3e0,#ffe0b2);border-left:4px solid #ff9800}
 .phase-card .phase-title{font-weight:700;margin-bottom:4px;color:#333}
+/* Analysis */
+.data-summary{background:linear-gradient(135deg,#f5f7fa,#e8ecf1);border-radius:12px;padding:16px;margin-bottom:16px;font-size:.82em;line-height:1.8}
+.data-summary .label{color:#888;font-size:.85em}
+.data-summary .value{font-weight:700;color:#333}
+.data-summary .sep{color:#ddd;margin:0 8px}
+.gen-btn{width:100%;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-size:1em;font-weight:700;cursor:pointer;transition:transform .15s,box-shadow .15s;margin-bottom:16px}
+.gen-btn:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(102,126,234,.4)}
+.gen-btn:disabled{opacity:.6;cursor:not-allowed;transform:none;box-shadow:none}
+.report-box{background:#fff;border-radius:12px;padding:20px;min-height:200px;font-size:.85em;line-height:1.9;color:#333}
+.report-box h2{font-size:1.1em;color:#667eea;margin:20px 0 8px;border-bottom:2px solid #f0f0f0;padding-bottom:6px}
+.report-box h2:first-child{margin-top:0}
+.report-box h3{font-size:.95em;color:#555;margin:14px 0 6px}
+.report-box ul{padding-left:20px;margin:6px 0}
+.report-box li{margin-bottom:4px}
+.report-box strong{color:#333}
+.report-box p{margin:6px 0}
+.report-box blockquote{border-left:3px solid #667eea;padding:8px 12px;margin:8px 0;background:#f8f9fa;border-radius:0 8px 8px 0;color:#555;font-size:.9em}
+.loading-dots{display:inline-block}.loading-dots::after{content:'';animation:dots 1.5s steps(4,end) infinite}
+@keyframes dots{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}100%{content:''}}
+.typing-cursor::after{content:'|';animation:blink .7s infinite;color:#667eea}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.report-actions{display:flex;gap:8px;margin-top:16px}
+.empty-state{text-align:center;padding:40px 20px;color:#bbb}
+.empty-state .icon{font-size:2.5em;margin-bottom:12px}
+.empty-state p{font-size:.85em;margin-top:8px}
