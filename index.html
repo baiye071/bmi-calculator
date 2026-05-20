@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BMI & 体脂率计算器</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Microsoft YaHei",sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:20px}
+  .card{background:#fff;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.3);padding:40px;width:100%;max-width:440px;animation:fadeUp .6s ease}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+  h1{text-align:center;font-size:1.6em;color:#333;margin-bottom:6px}
+  .subtitle{text-align:center;color:#999;font-size:.85em;margin-bottom:30px}
+  .form-group{margin-bottom:20px}
+  label{display:block;font-size:.85em;color:#555;margin-bottom:6px;font-weight:600}
+  input[type=number]{width:100%;padding:12px 16px;border:2px solid #e8e8e8;border-radius:10px;font-size:1em;outline:none;transition:border .2s}
+  input[type=number]:focus{border-color:#667eea}
+  .row{display:flex;gap:12px}
+  .row .form-group{flex:1}
+  .gender-group{display:flex;gap:10px}
+  .gender-btn{flex:1;padding:12px;border:2px solid #e8e8e8;border-radius:10px;background:#fff;font-size:1em;cursor:pointer;transition:all .2s;text-align:center;font-weight:600;color:#888}
+  .gender-btn:hover{border-color:#667eea;color:#667eea}
+  .gender-btn.active{border-color:#667eea;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff}
+  .calc-btn{width:100%;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-size:1.1em;font-weight:700;cursor:pointer;transition:transform .15s,box-shadow .15s;margin-top:10px}
+  .calc-btn:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(102,126,234,.4)}
+  .calc-btn:active{transform:translateY(0)}
+  .result{margin-top:28px;animation:fadeUp .4s ease}
+  .result-card{background:linear-gradient(135deg,#f5f7fa,#e8ecf1);border-radius:14px;padding:20px;margin-bottom:16px}
+  .result-label{font-size:.8em;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+  .result-value{font-size:2em;font-weight:800;color:#333}
+  .result-tag{display:inline-block;padding:4px 12px;border-radius:20px;font-size:.75em;font-weight:700;margin-top:6px}
+  .tag-underweight{background:#e3f2fd;color:#1976d2}
+  .tag-normal{background:#e8f5e9;color:#388e3c}
+  .tag-overweight{background:#fff3e0;color:#f57c00}
+  .tag-obese{background:#fce4ec;color:#c62828}
+  .progress-bar{height:8px;border-radius:4px;background:#e8e8e8;margin-top:10px;overflow:hidden;position:relative}
+  .progress-fill{height:100%;border-radius:4px;transition:width .8s ease}
+  .scale{display:flex;justify-content:space-between;font-size:.65em;color:#aaa;margin-top:4px}
+  .ref-table{margin-top:20px;font-size:.78em;color:#777;line-height:1.8}
+  .ref-table span{font-weight:600;color:#555}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>BMI & 体脂率计算器</h1>
+  <p class="subtitle">输入你的身体数据，获取健康评估</p>
+
+  <div class="form-group">
+    <label>性别</label>
+    <div class="gender-group">
+      <button class="gender-btn active" data-gender="male" onclick="setGender('male')">男</button>
+      <button class="gender-btn" data-gender="female" onclick="setGender('female')">女</button>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="form-group">
+      <label>身高 (cm)</label>
+      <input type="number" id="height" placeholder="170" min="50" max="250" step="0.1">
+    </div>
+    <div class="form-group">
+      <label>体重 (kg)</label>
+      <input type="number" id="weight" placeholder="65" min="10" max="300" step="0.1">
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label>年龄 (岁)</label>
+    <input type="number" id="age" placeholder="25" min="2" max="120">
+  </div>
+
+  <button class="calc-btn" onclick="calculate()">开始计算</button>
+
+  <div id="result" class="result hidden">
+    <div class="result-card">
+      <div class="result-label">BMI 指数</div>
+      <div class="result-value" id="bmiValue">--</div>
+      <span class="result-tag" id="bmiTag"></span>
+      <div class="progress-bar"><div class="progress-fill" id="bmiBar"></div></div>
+      <div class="scale"><span>15</span><span>18.5</span><span>24</span><span>28</span><span>40</span></div>
+    </div>
+
+    <div class="result-card">
+      <div class="result-label">体脂率</div>
+      <div class="result-value" id="bfValue">--%</div>
+      <span class="result-tag" id="bfTag"></span>
+      <div class="progress-bar"><div class="progress-fill" id="bfBar"></div></div>
+      <div class="scale"><span>5%</span><span>15%</span><span>25%</span><span>35%</span><span>50%</span></div>
+    </div>
+
+    <div class="ref-table" id="refTable"></div>
+  </div>
+</div>
+
+<script>
+let gender = 'male';
+
+function setGender(g) {
+  gender = g;
+  document.querySelectorAll('.gender-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.gender === g);
+  });
+}
+
+function calculate() {
+  const h = parseFloat(document.getElementById('height').value);
+  const w = parseFloat(document.getElementById('weight').value);
+  const a = parseInt(document.getElementById('age').value);
+  if (!h || !w || !a) return alert('请填写完整信息');
+
+  const hm = h / 100;
+  const bmi = w / (hm * hm);
+  const bf = gender === 'male'
+    ? 1.20 * bmi + 0.23 * a - 16.2
+    : 1.20 * bmi + 0.23 * a - 5.4;
+
+  // BMI display
+  document.getElementById('bmiValue').textContent = bmi.toFixed(1);
+  const bmiTag = document.getElementById('bmiTag');
+  let bmiClass, bmiText;
+  if (bmi < 18.5) { bmiClass = 'tag-underweight'; bmiText = '偏瘦'; }
+  else if (bmi < 24) { bmiClass = 'tag-normal'; bmiText = '正常'; }
+  else if (bmi < 28) { bmiClass = 'tag-overweight'; bmiText = '偏胖'; }
+  else { bmiClass = 'tag-obese'; bmiText = '肥胖'; }
+  bmiTag.className = 'result-tag ' + bmiClass;
+  bmiTag.textContent = bmiText;
+
+  // BMI progress bar (scale 15-40)
+  const bmiPct = Math.min(100, Math.max(0, (bmi - 15) / 25 * 100));
+  const bmiBar = document.getElementById('bidiBar') || document.getElementById('bmiBar');
+  document.getElementById('bmiBar').style.width = bmiPct + '%';
+  document.getElementById('bmiBar').style.background = bmi < 18.5 ? '#42a5f5' : bmi < 24 ? '#66bb6a' : bmi < 28 ? '#ffa726' : '#ef5350';
+
+  // Body fat display
+  const bfClamped = Math.max(2, Math.min(60, bf));
+  document.getElementById('bfValue').textContent = bfClamped.toFixed(1) + '%';
+  const bfTag = document.getElementById('bfTag');
+  let bfClass, bfText;
+  if (gender === 'male') {
+    if (bfClamped < 15) { bfClass = 'tag-underweight'; bfText = '偏瘦'; }
+    else if (bfClamped < 20) { bfClass = 'tag-normal'; bfText = '正常'; }
+    else if (bfClamped < 25) { bfClass = 'tag-overweight'; bfText = '偏胖'; }
+    else { bfClass = 'tag-obese'; bfText = '肥胖'; }
+  } else {
+    if (bfClamped < 20) { bfClass = 'tag-underweight'; bfText = '偏瘦'; }
+    else if (bfClamped < 25) { bfClass = 'tag-normal'; bfText = '正常'; }
+    else if (bfClamped < 30) { bfClass = 'tag-overweight'; bfText = '偏胖'; }
+    else { bfClass = 'tag-obese'; bfText = '肥胖'; }
+  }
+  bfTag.className = 'result-tag ' + bfClass;
+  bfTag.textContent = bfText;
+
+  // Body fat progress bar (scale 5%-50%)
+  const bfPct = Math.min(100, Math.max(0, (bfClamped - 5) / 45 * 100));
+  document.getElementById('bfBar').style.width = bfPct + '%';
+  document.getElementById('bfBar').style.background = bfClass === 'tag-underweight' ? '#42a5f5' : bfClass === 'tag-normal' ? '#66bb6a' : bfClass === 'tag-overweight' ? '#ffa726' : '#ef5350';
+
+  // Reference table
+  const isMale = gender === 'male';
+  document.getElementById('refTable').innerHTML =
+    `<span>BMI 参考：</span>偏瘦 &lt;18.5 | 正常 18.5~23.9 | 偏胖 24~27.9 | 肥胖 ≥28<br>` +
+    `<span>体脂率参考（${isMale ? '男' : '女'}）：</span>` +
+    (isMale
+      ? '偏瘦 &lt;15% | 正常 15%~20% | 偏胖 20%~25% | 肥胖 ≥25%'
+      : '偏瘦 &lt;20% | 正常 20%~25% | 偏胖 25%~30% | 肥胖 ≥30%') +
+    `<br><span style="font-size:.9em;color:#aaa">* 体脂率采用 BMI 估算法，结果仅供参考</span>`;
+
+  document.getElementById('result').classList.remove('hidden');
+}
+
+// Enter key to calculate
+document.addEventListener('keydown', e => { if (e.key === 'Enter') calculate(); });
+</script>
+</body>
+</html>
