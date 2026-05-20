@@ -103,6 +103,7 @@ input[type=number]:focus,select:focus{border-color:#667eea}
 .cal-day.ovulation{background:#e3f2fd;color:#1976d2}
 .cal-day.ovulation::before{content:'';position:absolute;top:4px;right:4px;width:6px;height:6px;border-radius:50%;background:#42a5f5}
 .cal-day.symptom-dot::after{content:'';position:absolute;bottom:3px;width:4px;height:4px;border-radius:50%;background:#ff9800}
+.cal-day.period-start{background:#e91e63;color:#fff;font-weight:700;box-shadow:0 0 0 2px #e91e63}
 .cal-day .day-num{line-height:1}
 /* Symptom panel */
 .symptom-panel{margin-top:16px;background:#f8f9fa;border-radius:12px;padding:16px;display:none}
@@ -219,6 +220,7 @@ input[type=number]:focus,select:focus{border-color:#667eea}
       <button onclick="calNav(1)">下月 &rarr;</button>
     </div>
     <div class="cal-weekdays"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+    <div id="calHint" style="text-align:center;font-size:.72em;color:#e91e63;margin-bottom:8px;min-height:16px"></div>
     <div class="cal-grid" id="calGrid"></div>
     <div class="stats-row" id="calStats"></div>
     <div id="phaseAdvice"></div>
@@ -596,7 +598,7 @@ function drawChart(data) {
 // Period Calendar
 const SYMPTOMS = ['痛经','头痛','疲劳','情绪波动','腰酸','食欲变化','乳房胀痛','失眠'];
 const MOODS = ['😊 正常','😔 低落','😤 烦躁','😴 嗜睡','🥰 愉快'];
-let calYear, calMonth, selectedDate = null;
+let calYear, calMonth, selectedDate = null, periodStart = null;
 
 function getPeriodData() {
   try { return JSON.parse(localStorage.getItem('period_data') || '{"periods":[],"symptoms":{}}'); }
@@ -624,6 +626,7 @@ function renderCalendar() {
   const todayStr = fmt(today);
 
   document.getElementById('calMonth').textContent = `${calYear}年${calMonth + 1}月`;
+  document.getElementById('calHint').textContent = periodStart ? `已选开始日 ${periodStart}，请点击结束日` : '点击日期标记经期开始日，再点结束日自动填充';
 
   const first = new Date(calYear, calMonth, 1);
   const last = new Date(calYear, calMonth + 1, 0);
@@ -644,6 +647,7 @@ function renderCalendar() {
     else if (predSet.has(dateStr)) cls += ' predicted';
     if (ovuSet.has(dateStr)) cls += ' ovulation';
     if (data.symptoms[dateStr]) cls += ' symptom-dot';
+    if (periodStart === dateStr) cls += ' period-start';
     html += `<div class="${cls}" onclick="togglePeriod('${dateStr}')"><span class="day-num">${d}</span></div>`;
   }
   document.getElementById('calGrid').innerHTML = html;
@@ -668,17 +672,37 @@ function fmt(d) {
 
 function togglePeriod(dateStr) {
   const data = getPeriodData();
-  const idx = data.periods.indexOf(dateStr);
-  if (idx >= 0) {
-    data.periods.splice(idx, 1);
+
+  // If clicking an existing period day, remove it
+  if (data.periods.includes(dateStr)) {
+    data.periods = data.periods.filter(d => d !== dateStr);
+    periodStart = null;
     selectedDate = null;
     document.getElementById('symptomPanel').classList.remove('show');
-  } else {
-    data.periods.push(dateStr);
-    data.periods.sort();
-    selectedDate = dateStr;
-    showSymptomPanel(dateStr, data);
+    savePeriodData(data);
+    renderCalendar();
+    return;
   }
+
+  // First click: set start
+  if (!periodStart) {
+    periodStart = dateStr;
+    renderCalendar();
+    return;
+  }
+
+  // Second click: fill range from start to this date
+  const start = new Date(periodStart);
+  const end = new Date(dateStr);
+  if (end < start) { start.setTime(end.getTime()); end.setTime(new Date(periodStart).getTime()); }
+  const d = new Date(start);
+  while (d <= end) {
+    const ds = fmt(d);
+    if (!data.periods.includes(ds)) data.periods.push(ds);
+    d.setDate(d.getDate() + 1);
+  }
+  data.periods.sort();
+  periodStart = null;
   savePeriodData(data);
   renderCalendar();
 }
