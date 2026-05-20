@@ -306,11 +306,12 @@ function calculate() {
 
   document.getElementById('result').classList.remove('hidden');
 
-  // Diet recommendations
+  // Diet recommendations (gender-specific)
   const goal = bmi < 18.5 ? 'gain' : bmi < 24 ? 'maintain' : 'lose';
   const targetCal = goal === 'lose' ? Math.round(tdee * 0.8) : goal === 'gain' ? Math.round(tdee * 1.15) : Math.round(tdee);
-  const proteinG = Math.round(w * (goal === 'lose' ? 2.0 : goal === 'gain' ? 1.8 : 1.5));
-  const fatCal = Math.round(targetCal * 0.25);
+  const proteinG = Math.round(w * (isMale ? (goal === 'lose' ? 2.0 : goal === 'gain' ? 1.8 : 1.5) : (goal === 'lose' ? 1.6 : goal === 'gain' ? 1.5 : 1.2)));
+  const fatPct = isMale ? 0.25 : 0.30; // females need more fat for hormonal health
+  const fatCal = Math.round(targetCal * fatPct);
   const fatG = Math.round(fatCal / 9);
   const carbCal = targetCal - proteinG * 4 - fatCal;
   const carbG = Math.max(0, Math.round(carbCal / 4));
@@ -318,74 +319,109 @@ function calculate() {
   const dietSection = document.getElementById('dietSection');
   let dietHTML = '';
   if (goal === 'lose') {
+    const foods = isMale
+      ? `<span class="food-tag good">鸡胸肉</span><span class="food-tag good">牛肉</span><span class="food-tag good">鱼虾</span>
+         <span class="food-tag good">鸡蛋</span><span class="food-tag good">西兰花</span><span class="food-tag good">糙米</span>`
+      : `<span class="food-tag good">鸡胸肉</span><span class="food-tag good">鱼虾</span><span class="food-tag good">菠菜</span>
+         <span class="food-tag good">豆腐</span><span class="food-tag good">燕麦</span><span class="food-tag good">红枣</span>`;
+    const avoid = isMale
+      ? `<span class="food-tag avoid">啤酒</span><span class="food-tag avoid">炸鸡</span><span class="food-tag avoid">薯片</span><span class="food-tag avoid">白面包</span>`
+      : `<span class="food-tag avoid">奶茶</span><span class="food-tag avoid">蛋糕</span><span class="food-tag avoid">薯片</span><span class="food-tag avoid">冰淇淋</span>`;
+    const tips = isMale ? [
+      `每日热量控制在 <b>${targetCal} kcal</b>，比消耗少约 ${Math.round(tdee - targetCal)} kcal`,
+      `蛋白质摄入较高（${proteinG}g），有助于保留肌肉、增强饱腹感`,
+      `减少精制碳水（白米、白面包），选择粗粮、薯类`,
+      `烹饪方式优先蒸、煮、烤，避免油炸`,
+      `每餐先吃蔬菜和蛋白质，最后吃主食`,
+      `多喝水（每天 2~3L），避免含糖饮料和酒精`
+    ] : [
+      `每日热量控制在 <b>${targetCal} kcal</b>，比消耗少约 ${Math.round(tdee - targetCal)} kcal`,
+      `蛋白质摄入 ${proteinG}g，搭配铁质丰富的食物（菠菜、红肉、黑豆）`,
+      `减脂期间每日热量不低于 1200 kcal，避免影响生理周期`,
+      `选择低 GI 碳水（燕麦、糙米），保持血糖稳定`,
+      `适量摄入健康脂肪（牛油果、坚果），脂肪占比 ${Math.round(fatPct*100)}% 有助于激素平衡`,
+      `经期前后可适当增加 100~200 kcal，不必过度克制`
+    ];
     dietHTML = `
       <div class="diet-card warn">
-        <div class="diet-title"><span class="icon">&#9888;</span> 减脂饮食建议</div>
+        <div class="diet-title"><span class="icon">&#9888;</span> ${isMale ? '男性' : '女性'}减脂饮食建议</div>
         <div class="macro-row">
           <div class="macro-item protein"><div class="val">${proteinG}g</div><div class="lbl">蛋白质</div></div>
           <div class="macro-item carb"><div class="val">${carbG}g</div><div class="lbl">碳水</div></div>
           <div class="macro-item fat"><div class="val">${fatG}g</div><div class="lbl">脂肪</div></div>
         </div>
-        <div class="food-tags">
-          <span class="food-tag good">鸡胸肉</span><span class="food-tag good">鱼虾</span><span class="food-tag good">鸡蛋</span>
-          <span class="food-tag good">西兰花</span><span class="food-tag good">糙米</span><span class="food-tag good">燕麦</span>
-          <span class="food-tag avoid">奶茶</span><span class="food-tag avoid">炸鸡</span><span class="food-tag avoid">薯片</span>
-          <span class="food-tag avoid">白面包</span>
-        </div>
-        <ul class="diet-tips">
-          <li>每日热量控制在 <b>${targetCal} kcal</b>，比消耗少约 ${Math.round(tdee - targetCal)} kcal</li>
-          <li>蛋白质占比较高（${proteinG}g），有助于保留肌肉、增强饱腹感</li>
-          <li>减少精制碳水（白米、白面包），选择粗粮、薯类</li>
-          <li>烹饪方式优先蒸、煮、烤，避免油炸</li>
-          <li>每餐先吃蔬菜和蛋白质，最后吃主食</li>
-          <li>多喝水（每天 1.5~2L），避免含糖饮料</li>
-        </ul>
+        <div class="food-tags">${foods}${avoid}</div>
+        <ul class="diet-tips">${tips.map(t => '<li>' + t + '</li>').join('')}</ul>
       </div>`;
   } else if (goal === 'gain') {
+    const foods = isMale
+      ? `<span class="food-tag good">牛肉</span><span class="food-tag good">鸡蛋</span><span class="food-tag good">牛奶</span>
+         <span class="food-tag good">坚果</span><span class="food-tag good">香蕉</span><span class="food-tag good">牛油果</span>`
+      : `<span class="food-tag good">鸡蛋</span><span class="food-tag good">牛奶</span><span class="food-tag good">三文鱼</span>
+         <span class="food-tag good">坚果</span><span class="food-tag good">牛油果</span><span class="food-tag good">红枣</span>`;
+    const avoid = isMale
+      ? `<span class="food-tag avoid">空热量零食</span><span class="food-tag avoid">碳酸饮料</span>`
+      : `<span class="food-tag avoid">空热量零食</span><span class="food-tag avoid">油炸食品</span>`;
+    const tips = isMale ? [
+      `每日热量达到 <b>${targetCal} kcal</b>，比消耗多约 ${Math.round(targetCal - tdee)} kcal`,
+      `每天 4~5 餐，避免一次吃太多导致消化不良`,
+      `蛋白质充足（${proteinG}g），碳水 ${carbG}g，为肌肉合成提供原料`,
+      `训练后 30 分钟内补充蛋白质 + 碳水（如牛奶 + 香蕉）`,
+      `补锌（牡蛎、牛肉、南瓜子），有助于维持 testosterone 水平`,
+      `配合力量训练，确保增的是肌肉而非脂肪`
+    ] : [
+      `每日热量达到 <b>${targetCal} kcal</b>，比消耗多约 ${Math.round(targetCal - tdee)} kcal`,
+      `每天 4~5 餐，少食多餐更容易消化吸收`,
+      `蛋白质 ${proteinG}g，搭配富含铁和钙的食物`,
+      `选择营养密度高的食物（三文鱼、鸡蛋、坚果），而非空热量`,
+      `适量健康脂肪（${fatG}g，占比 ${Math.round(fatPct*100)}%），支持激素分泌`,
+      `配合力量训练塑形，增重同时保持体态匀称`
+    ];
     dietHTML = `
       <div class="diet-card">
-        <div class="diet-title"><span class="icon">&#127860;</span> 增重饮食建议</div>
+        <div class="diet-title"><span class="icon">&#127860;</span> ${isMale ? '男性' : '女性'}增重饮食建议</div>
         <div class="macro-row">
           <div class="macro-item protein"><div class="val">${proteinG}g</div><div class="lbl">蛋白质</div></div>
           <div class="macro-item carb"><div class="val">${carbG}g</div><div class="lbl">碳水</div></div>
           <div class="macro-item fat"><div class="val">${fatG}g</div><div class="lbl">脂肪</div></div>
         </div>
-        <div class="food-tags">
-          <span class="food-tag good">牛肉</span><span class="food-tag good">鸡蛋</span><span class="food-tag good">牛奶</span>
-          <span class="food-tag good">坚果</span><span class="food-tag good">香蕉</span><span class="food-tag good">牛油果</span>
-          <span class="food-tag avoid">空热量零食</span><span class="food-tag avoid">碳酸饮料</span>
-        </div>
-        <ul class="diet-tips">
-          <li>每日热量达到 <b>${targetCal} kcal</b>，比消耗多约 ${Math.round(targetCal - tdee)} kcal</li>
-          <li>每天 4~5 餐，避免一次吃太多导致消化不良</li>
-          <li>碳水充足（${carbG}g），为身体提供能量支持肌肉合成</li>
-          <li>训练后 30 分钟内补充蛋白质 + 碳水（如牛奶 + 香蕉）</li>
-          <li>选择营养密度高的食物，避免只靠垃圾食品增重</li>
-          <li>配合力量训练，确保增的是肌肉而非脂肪</li>
-        </ul>
+        <div class="food-tags">${foods}${avoid}</div>
+        <ul class="diet-tips">${tips.map(t => '<li>' + t + '</li>').join('')}</ul>
       </div>`;
   } else {
+    const foods = isMale
+      ? `<span class="food-tag good">鱼肉</span><span class="food-tag good">鸡胸肉</span><span class="food-tag good">豆制品</span>
+         <span class="food-tag good">蔬菜</span><span class="food-tag good">全谷物</span><span class="food-tag good">坚果</span>`
+      : `<span class="food-tag good">鱼肉</span><span class="food-tag good">豆腐</span><span class="food-tag good">菠菜</span>
+         <span class="food-tag good">水果</span><span class="food-tag good">酸奶</span><span class="food-tag good">坚果</span>`;
+    const avoid = isMale
+      ? `<span class="food-tag avoid">过度加工食品</span><span class="food-tag avoid">高糖饮料</span>`
+      : `<span class="food-tag avoid">过度加工食品</span><span class="food-tag avoid">高糖甜品</span>`;
+    const tips = isMale ? [
+      `每日热量维持在 <b>${targetCal} kcal</b> 左右`,
+      `三餐规律，早餐不可省略`,
+      `每天摄入 300~500g 蔬菜，200~350g 水果`,
+      `每周吃 2~3 次鱼类，补充优质蛋白和 Omega-3`,
+      `补锌（牡蛎、牛肉）和维生素 D（晒太阳），维持身体机能`,
+      `控制盐（&lt;5g/天）和油（&lt;25g/天）的摄入`
+    ] : [
+      `每日热量维持在 <b>${targetCal} kcal</b> 左右`,
+      `三餐规律，早餐不可省略，可搭配酸奶和水果`,
+      `每天摄入 300~500g 蔬菜，200~350g 水果`,
+      `补铁（红肉、菠菜、黑豆）和补钙（牛奶、豆腐），女性需求更高`,
+      `适量摄入大豆制品，含天然植物雌激素，有益健康`,
+      `控制盐（&lt;5g/天）和油（&lt;25g/天）的摄入`
+    ];
     dietHTML = `
       <div class="diet-card">
-        <div class="diet-title"><span class="icon">&#9989;</span> 均衡饮食建议</div>
+        <div class="diet-title"><span class="icon">&#9989;</span> ${isMale ? '男性' : '女性'}均衡饮食建议</div>
         <div class="macro-row">
           <div class="macro-item protein"><div class="val">${proteinG}g</div><div class="lbl">蛋白质</div></div>
           <div class="macro-item carb"><div class="val">${carbG}g</div><div class="lbl">碳水</div></div>
           <div class="macro-item fat"><div class="val">${fatG}g</div><div class="lbl">脂肪</div></div>
         </div>
-        <div class="food-tags">
-          <span class="food-tag good">鱼肉</span><span class="food-tag good">豆制品</span><span class="food-tag good">蔬菜</span>
-          <span class="food-tag good">水果</span><span class="food-tag good">全谷物</span><span class="food-tag good">坚果</span>
-          <span class="food-tag avoid">过度加工食品</span><span class="food-tag avoid">高糖饮料</span>
-        </div>
-        <ul class="diet-tips">
-          <li>每日热量维持在 <b>${targetCal} kcal</b> 左右</li>
-          <li>三餐规律，早餐不可省略</li>
-          <li>每天摄入 300~500g 蔬菜，200~350g 水果</li>
-          <li>每周吃 2~3 次鱼类，补充优质蛋白和 Omega-3</li>
-          <li>控制盐（&lt;5g/天）和油（&lt;25g/天）的摄入</li>
-          <li>保持当前的运动习惯，体重维持得很好</li>
-        </ul>
+        <div class="food-tags">${foods}${avoid}</div>
+        <ul class="diet-tips">${tips.map(t => '<li>' + t + '</li>').join('')}</ul>
       </div>`;
   }
   dietSection.innerHTML = dietHTML;
