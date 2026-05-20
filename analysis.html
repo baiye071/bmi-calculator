@@ -23,6 +23,14 @@
   <p class="subtitle">基于你的数据生成专业健康报告</p>
 
   <div id="dataSummary"></div>
+  <div class="form-group" style="margin-bottom:16px">
+    <label>API Key</label>
+    <div style="display:flex;gap:8px">
+      <input type="password" id="apiKeyInput" placeholder="输入你的 mimo API Key" style="flex:1;padding:11px 14px;border:2px solid #e8e8e8;border-radius:10px;font-size:.95em;outline:none;background:#fff">
+      <button class="btn-sm" style="flex:none;padding:11px 16px" onclick="saveKey()">保存</button>
+    </div>
+    <div id="keyStatus" style="font-size:.72em;margin-top:4px;min-height:16px"></div>
+  </div>
   <button class="gen-btn" id="genBtn" onclick="generateReport()">生成分析报告</button>
   <div class="report-box" id="reportBox">
     <div class="empty-state">
@@ -223,13 +231,23 @@ function renderSummary(data) {
 
 let fullReport = '';
 
+function saveKey() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!key) return;
+  setApiKey(key);
+  document.getElementById('keyStatus').innerHTML = '<span style="color:#22c55e">Key 已保存</span>';
+  setTimeout(() => { document.getElementById('keyStatus').innerHTML = ''; }, 2000);
+}
+
 async function generateReport() {
   const btn = document.getElementById('genBtn');
   const box = document.getElementById('reportBox');
   const actions = document.getElementById('reportActions');
 
-  if (API_CONFIG.apiKey === '在此填入API Key' || API_CONFIG.baseUrl === '在此填入API地址') {
-    alert('请先在 config.js 中填入 API 地址和 API Key');
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    alert('请先输入并保存 API Key');
+    document.getElementById('apiKeyInput').focus();
     return;
   }
 
@@ -249,7 +267,7 @@ async function generateReport() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + API_CONFIG.apiKey
+        'Authorization': 'Bearer ' + apiKey
       },
       body: JSON.stringify({
         model: API_CONFIG.model,
@@ -347,6 +365,7 @@ function downloadReport() {
 }
 
 // Init
+document.getElementById('apiKeyInput').value = getApiKey();
 renderSummary(getData());
 </script>
 </body>
