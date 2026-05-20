@@ -67,6 +67,25 @@ input[type=number]:focus,select:focus{border-color:#667eea}
 .btn-sm{flex:1;padding:8px;border:1.5px solid #e0e0e0;border-radius:8px;background:#fff;font-size:.78em;color:#888;cursor:pointer;transition:all .15s;text-align:center}
 .btn-sm:hover{border-color:#667eea;color:#667eea}
 .btn-sm.danger:hover{border-color:#ef5350;color:#ef5350}
+/* Diet advice */
+.diet-card{background:linear-gradient(135deg,#f0fdf4,#ecfdf5);border-radius:12px;padding:16px;margin-bottom:12px;border-left:4px solid #22c55e}
+.diet-card.warn{background:linear-gradient(135deg,#fffbeb,#fef3c7);border-left-color:#f59e0b}
+.diet-card.strict{background:linear-gradient(135deg,#fef2f2,#fee2e2);border-left-color:#ef4444}
+.diet-title{font-size:.85em;font-weight:700;color:#333;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.diet-title .icon{font-size:1.1em}
+.macro-row{display:flex;gap:8px;margin-bottom:10px}
+.macro-item{flex:1;text-align:center;padding:8px 4px;border-radius:8px;background:rgba(255,255,255,.7)}
+.macro-item .val{font-size:1.1em;font-weight:800;color:#333}
+.macro-item .lbl{font-size:.65em;color:#888;margin-top:2px}
+.macro-item.protein .val{color:#22c55e}
+.macro-item.carb .val{color:#f59e0b}
+.macro-item.fat .val{color:#ef4444}
+.food-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.food-tag{padding:4px 10px;border-radius:16px;font-size:.72em;font-weight:600;background:#fff;color:#555;border:1px solid #e5e7eb}
+.food-tag.good{background:#dcfce7;color:#166534;border-color:#bbf7d0}
+.food-tag.avoid{background:#fee2e2;color:#991b1b;border-color:#fecaca}
+.diet-tips{font-size:.75em;color:#666;line-height:1.7;margin-top:6px}
+.diet-tips li{margin-bottom:3px}
 </style>
 </head>
 <body>
@@ -144,6 +163,7 @@ input[type=number]:focus,select:focus{border-color:#667eea}
         <div class="scale"><span>0.7</span><span>0.8</span><span>0.9</span><span>1.0</span><span>1.1</span></div>
       </div>
       <div class="ref-table" id="refTable"></div>
+      <div id="dietSection"></div>
     </div>
   </div>
 
@@ -285,6 +305,90 @@ function calculate() {
   document.getElementById('refTable').innerHTML = ref;
 
   document.getElementById('result').classList.remove('hidden');
+
+  // Diet recommendations
+  const goal = bmi < 18.5 ? 'gain' : bmi < 24 ? 'maintain' : 'lose';
+  const targetCal = goal === 'lose' ? Math.round(tdee * 0.8) : goal === 'gain' ? Math.round(tdee * 1.15) : Math.round(tdee);
+  const proteinG = Math.round(w * (goal === 'lose' ? 2.0 : goal === 'gain' ? 1.8 : 1.5));
+  const fatCal = Math.round(targetCal * 0.25);
+  const fatG = Math.round(fatCal / 9);
+  const carbCal = targetCal - proteinG * 4 - fatCal;
+  const carbG = Math.max(0, Math.round(carbCal / 4));
+
+  const dietSection = document.getElementById('dietSection');
+  let dietHTML = '';
+  if (goal === 'lose') {
+    dietHTML = `
+      <div class="diet-card warn">
+        <div class="diet-title"><span class="icon">&#9888;</span> 减脂饮食建议</div>
+        <div class="macro-row">
+          <div class="macro-item protein"><div class="val">${proteinG}g</div><div class="lbl">蛋白质</div></div>
+          <div class="macro-item carb"><div class="val">${carbG}g</div><div class="lbl">碳水</div></div>
+          <div class="macro-item fat"><div class="val">${fatG}g</div><div class="lbl">脂肪</div></div>
+        </div>
+        <div class="food-tags">
+          <span class="food-tag good">鸡胸肉</span><span class="food-tag good">鱼虾</span><span class="food-tag good">鸡蛋</span>
+          <span class="food-tag good">西兰花</span><span class="food-tag good">糙米</span><span class="food-tag good">燕麦</span>
+          <span class="food-tag avoid">奶茶</span><span class="food-tag avoid">炸鸡</span><span class="food-tag avoid">薯片</span>
+          <span class="food-tag avoid">白面包</span>
+        </div>
+        <ul class="diet-tips">
+          <li>每日热量控制在 <b>${targetCal} kcal</b>，比消耗少约 ${Math.round(tdee - targetCal)} kcal</li>
+          <li>蛋白质占比较高（${proteinG}g），有助于保留肌肉、增强饱腹感</li>
+          <li>减少精制碳水（白米、白面包），选择粗粮、薯类</li>
+          <li>烹饪方式优先蒸、煮、烤，避免油炸</li>
+          <li>每餐先吃蔬菜和蛋白质，最后吃主食</li>
+          <li>多喝水（每天 1.5~2L），避免含糖饮料</li>
+        </ul>
+      </div>`;
+  } else if (goal === 'gain') {
+    dietHTML = `
+      <div class="diet-card">
+        <div class="diet-title"><span class="icon">&#127860;</span> 增重饮食建议</div>
+        <div class="macro-row">
+          <div class="macro-item protein"><div class="val">${proteinG}g</div><div class="lbl">蛋白质</div></div>
+          <div class="macro-item carb"><div class="val">${carbG}g</div><div class="lbl">碳水</div></div>
+          <div class="macro-item fat"><div class="val">${fatG}g</div><div class="lbl">脂肪</div></div>
+        </div>
+        <div class="food-tags">
+          <span class="food-tag good">牛肉</span><span class="food-tag good">鸡蛋</span><span class="food-tag good">牛奶</span>
+          <span class="food-tag good">坚果</span><span class="food-tag good">香蕉</span><span class="food-tag good">牛油果</span>
+          <span class="food-tag avoid">空热量零食</span><span class="food-tag avoid">碳酸饮料</span>
+        </div>
+        <ul class="diet-tips">
+          <li>每日热量达到 <b>${targetCal} kcal</b>，比消耗多约 ${Math.round(targetCal - tdee)} kcal</li>
+          <li>每天 4~5 餐，避免一次吃太多导致消化不良</li>
+          <li>碳水充足（${carbG}g），为身体提供能量支持肌肉合成</li>
+          <li>训练后 30 分钟内补充蛋白质 + 碳水（如牛奶 + 香蕉）</li>
+          <li>选择营养密度高的食物，避免只靠垃圾食品增重</li>
+          <li>配合力量训练，确保增的是肌肉而非脂肪</li>
+        </ul>
+      </div>`;
+  } else {
+    dietHTML = `
+      <div class="diet-card">
+        <div class="diet-title"><span class="icon">&#9989;</span> 均衡饮食建议</div>
+        <div class="macro-row">
+          <div class="macro-item protein"><div class="val">${proteinG}g</div><div class="lbl">蛋白质</div></div>
+          <div class="macro-item carb"><div class="val">${carbG}g</div><div class="lbl">碳水</div></div>
+          <div class="macro-item fat"><div class="val">${fatG}g</div><div class="lbl">脂肪</div></div>
+        </div>
+        <div class="food-tags">
+          <span class="food-tag good">鱼肉</span><span class="food-tag good">豆制品</span><span class="food-tag good">蔬菜</span>
+          <span class="food-tag good">水果</span><span class="food-tag good">全谷物</span><span class="food-tag good">坚果</span>
+          <span class="food-tag avoid">过度加工食品</span><span class="food-tag avoid">高糖饮料</span>
+        </div>
+        <ul class="diet-tips">
+          <li>每日热量维持在 <b>${targetCal} kcal</b> 左右</li>
+          <li>三餐规律，早餐不可省略</li>
+          <li>每天摄入 300~500g 蔬菜，200~350g 水果</li>
+          <li>每周吃 2~3 次鱼类，补充优质蛋白和 Omega-3</li>
+          <li>控制盐（&lt;5g/天）和油（&lt;25g/天）的摄入</li>
+          <li>保持当前的运动习惯，体重维持得很好</li>
+        </ul>
+      </div>`;
+  }
+  dietSection.innerHTML = dietHTML;
 
   // Save to history
   saveRecord({ date: new Date().toLocaleString('zh-CN'), bmi: +bmi.toFixed(1), bf: +bfClamped.toFixed(1), tdee: Math.round(tdee), whr: (waist && hip) ? +(waist/hip).toFixed(2) : null, weight: w, height: h, age: a, gender });
