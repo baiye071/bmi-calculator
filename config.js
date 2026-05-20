@@ -1,5 +1,5 @@
 const API_CONFIG = {
-  baseUrl: '在此填入API地址',  // 例如 https://api.example.com
-  apiKey: '在此填入API Key',
+  baseUrl: 'https://token-plan-cn.xiaomimimo.com',
+  apiKey: 'tp-c3ylikxbmhacmczgcjrhrgw8kxp8340s3ywaxunkzzpnaiit',
   model: 'mimo-v2.5-pro'
 };
