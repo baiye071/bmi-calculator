@@ -192,12 +192,18 @@ function renderCalendar() {
   const monthPrefix = `${calYear}-${String(calMonth+1).padStart(2,'0')}`;
   const allDays = allPeriodDays(data);
   const monthDays = allDays.filter(d => d.startsWith(monthPrefix)).length;
+  const confPercent = Math.round((stats.confidence || 0) * 100);
   document.getElementById('calStats').innerHTML = `
-    <div class="stats-card"><div class="val">${cycle}</div><div class="lbl">平均周期（天）</div></div>
+    <div class="stats-card"><div class="val">${cycle}</div><div class="lbl">预测周期（天）</div></div>
     <div class="stats-card"><div class="val">${stats.avgDuration || '--'}</div><div class="lbl">平均经期（天）</div></div>
     <div class="stats-card"><div class="val">${preDays}+${postDays}</div><div class="lbl">安全期（前+后）</div></div>
     <div class="stats-card"><div class="val">${daysUntil !== null && daysUntil >= 0 ? daysUntil + '天' : '--'}</div><div class="lbl">距下次经期</div></div>
   `;
+  if (data.ranges.length >= 2) {
+    const confBar = document.getElementById('calStats');
+    const confHtml = `<div style="text-align:center;margin-top:8px;font-size:.72em;color:#888">预测置信度：<span style="color:${confPercent > 60 ? '#22c55e' : confPercent > 30 ? '#f59e0b' : '#ef4444'};font-weight:700">${confPercent}%</span>（${data.ranges.length} 个周期数据，贝叶斯加权）</div>`;
+    confBar.insertAdjacentHTML('afterend', confHtml);
+  }
 
   renderPhaseAdvice(data, predictions, today);
 }
@@ -402,11 +408,12 @@ function doSetEnd() {
 
 function getStats(data) {
   const ranges = data.ranges.filter(r => r.start && r.end);
+  if (!ranges.length) return { avgCycle: null, avgDuration: null, confidence: 0 };
   if (ranges.length < 2) {
-    const avgDuration = ranges.length ?
-      Math.round((new Date(ranges[0].end) - new Date(ranges[0].start)) / 86400000) + 1 : null;
-    return { avgCycle: null, avgDuration };
+    const dur = Math.round((new Date(ranges[0].end) - new Date(ranges[0].start)) / 86400000) + 1;
+    return { avgCycle: null, avgDuration: dur, confidence: 0.1 };
   }
+
   const sorted = [...ranges].sort((a, b) => a.start.localeCompare(b.start));
   const cycles = [];
   for (let i = 1; i < sorted.length; i++) {
@@ -414,9 +421,32 @@ function getStats(data) {
     if (diff > 15 && diff < 60) cycles.push(diff);
   }
   const durations = sorted.map(r => Math.round((new Date(r.end) - new Date(r.start)) / 86400000) + 1);
+
+  // Bayesian weighted average with exponential decay
+  const priorCycle = 30, priorDuration = 5;
+  const priorWeight = 2; // prior counts as 2 observations
+  const decay = 0.7; // recent cycles weighted 0.7^(distance)
+
+  const bayesianWeighted = (values, prior) => {
+    if (!values.length) return prior;
+    let weightedSum = prior * priorWeight;
+    let totalWeight = priorWeight;
+    for (let i = 0; i < values.length; i++) {
+      const w = Math.pow(decay, values.length - 1 - i);
+      weightedSum += values[i] * w;
+      totalWeight += w;
+    }
+    return Math.round(weightedSum / totalWeight);
+  };
+
+  const confidence = Math.min(1, (cycles.length * 0.15 + 0.1));
+
   return {
-    avgCycle: cycles.length ? Math.round(cycles.reduce((a, b) => a + b, 0) / cycles.length) : null,
-    avgDuration: Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
+    avgCycle: cycles.length ? bayesianWeighted(cycles, priorCycle) : null,
+    avgDuration: bayesianWeighted(durations, priorDuration),
+    confidence,
+    rawCycles: cycles,
+    rawDurations: durations
   };
 }
 

@@ -46,23 +46,34 @@
 </div>
 
 <script>
-const SYSTEM_PROMPT = `你是一位专业的健康管理师和营养师，具备医学、营养学、运动科学和女性健康领域的深厚知识。请根据用户提供的身体数据和相关的健康知识参考，生成一份专业、详细、个性化的健康分析报告。
+const SYSTEM_PROMPT = `你是一位温暖贴心的健康管理师，兼具医学专业知识和细腻的情感洞察力。你的角色不仅是医生，更是一位懂她的闺蜜——既专业可靠，又温暖共情。
+
+## 交互风格
+- **先共情，再建议**：先理解和认可用户的情绪状态，再给出专业建议
+- **用"你"而非"患者"**：拉近距离，像朋友对话
+- **避免冰冷的医学术语**：用生活化的语言解释专业概念
+- **适时鼓励**：当数据有进步时，真诚地表扬；当数据不理想时，温和地引导
+- **主动关怀**：如果发现情绪低落、睡眠不足、痛经严重等信号，主动表达关心
 
 ## 输出要求
-1. 使用中文
-2. 使用 Markdown 格式
-3. 结构清晰，包含以下章节：
-   - ## 📊 综合健康评估（整体评分和概述）
-   - ## 🏋️ 体重管理分析（BMI/体脂详细解读+趋势分析）
-   - ## 🍎 营养方案（个性化饮食计划，包含具体食物推荐）
-   - ## 🏃 运动处方（具体运动类型、频率、强度建议）
-   - ## ⚠️ 风险提示（潜在健康风险和预防建议）
-   - 如果有月经数据，增加 ## 🌸 月经周期分析（包含经量、精力、痛经、睡眠趋势、症状统计、情绪分布的详细分析）
-4. 语言专业但通俗易懂，像一位耐心的医生在给患者解释
-5. 给出具体可执行的建议，不要泛泛而谈
-6. 如果数据有异常，温和地指出并给出改善方案
-7. 如果有经期详细记录，分析症状与月经周期阶段的关联性，给出各阶段的针对性建议
-8. 在报告末尾加一段免责声明`;
+1. 使用中文，Markdown 格式
+2. 结构包含：
+   - ## 💝 温暖开场（根据当前周期阶段和情绪数据，用一段温暖的话开头，像朋友的关心）
+   - ## 📊 综合健康评估（整体评分+趋势，如有进步要表扬）
+   - ## 🏋️ 体重管理分析（BMI/体脂解读+趋势）
+   - ## 🍎 营养方案（个性化饮食计划+具体食物推荐）
+   - ## 🏃 运动处方（运动类型、频率、强度）
+   - ## ⚠️ 风险提示（温和指出，不制造焦虑）
+   - 如果有月经数据：
+     - ## 🌸 周期分析（经量、精力、痛经、睡眠趋势、症状统计、情绪分布）
+     - ## 🧘‍♀️ 情绪关怀（根据情绪记录和周期阶段，给出心理调节建议+暖心鼓励）
+3. **情绪响应规则**：
+   - 如果用户记录了低落/焦虑/哭泣等负面情绪 → 先安慰，再建议，语气要温柔
+   - 如果用户处于经期 → 关注痛经和疲劳，建议休息而非苛求自律
+   - 如果用户处于卵泡期/排卵期 → 鼓励利用精力充沛的优势
+   - 如果用户处于黄体期 → 提前预警 PMS，教她如何应对
+   - 如果情绪数据总体平稳 → 表扬她的情绪管理能力
+4. 在报告末尾加一段免责声明，但用温暖的语气而非冷冰冰的法律措辞`;
 
 function getData() {
   const history = (() => { try { return JSON.parse(localStorage.getItem('bmi_history') || '[]'); } catch { return []; } })();
@@ -192,6 +203,51 @@ function buildPrompt(data) {
     // Ovulation days
     if (data.period.ovulationDays && data.period.ovulationDays.length) {
       prompt += `- 用户标记排卵日：${data.period.ovulationDays.join(', ')}\n`;
+    }
+
+    // Current cycle phase (Bayesian)
+    const lastRange = completeRanges.length ? completeRanges.reduce((a, b) => a.start > b.start ? a : b) : null;
+    if (lastRange) {
+      const today = new Date(); today.setHours(0,0,0,0);
+      const lastStart = new Date(lastRange.start);
+      const daysSinceStart = Math.floor((today - lastStart) / 86400000);
+      const dur = Math.round((new Date(lastRange.end) - lastStart) / 86400000) + 1;
+
+      // Bayesian weighted cycle
+      let avgCycle = 30;
+      if (completeRanges.length >= 2) {
+        const sorted = [...completeRanges].sort((a, b) => a.start.localeCompare(b.start));
+        const cycles = [];
+        for (let i = 1; i < sorted.length; i++) {
+          const diff = Math.round((new Date(sorted[i].start) - new Date(sorted[i-1].start)) / 86400000);
+          if (diff > 15 && diff < 60) cycles.push(diff);
+        }
+        if (cycles.length) {
+          let ws = 30 * 2, tw = 2;
+          cycles.forEach((c, i) => { const w = Math.pow(0.7, cycles.length - 1 - i); ws += c * w; tw += w; });
+          avgCycle = Math.round(ws / tw);
+        }
+      }
+
+      const dayInCycle = daysSinceStart + 1;
+      let phase, phaseEmoji, emotionHint;
+      if (dayInCycle <= dur) {
+        phase = '经期'; phaseEmoji = '🩸';
+        emotionHint = '用户正处于经期，可能感到疲惫、情绪低落或痛经不适。请优先表达关心和安慰，建议休息和温补，不要苛求自律。';
+      } else if (dayInCycle <= avgCycle - 14 - 4) {
+        phase = '卵泡期'; phaseEmoji = '🌱';
+        emotionHint = '用户处于卵泡期，精力逐渐恢复，情绪趋于积极。可以鼓励她利用这个黄金期安排运动和重要事务。';
+      } else if (dayInCycle <= avgCycle - 14 + 2) {
+        phase = '排卵期'; phaseEmoji = '🥚';
+        emotionHint = '用户处于排卵期，精力和情绪处于最佳状态。可以给出积极正面的反馈，鼓励社交和运动。';
+      } else {
+        phase = '黄体期'; phaseEmoji = '🌙';
+        emotionHint = '用户处于黄体期，可能出现 PMS 症状（情绪波动、食欲增加、乳房胀痛）。提前预警并教她如何应对，语气要温柔包容。';
+      }
+      prompt += `\n## 当前周期状态\n`;
+      prompt += `- 今天是周期第 ${dayInCycle} 天（${phaseEmoji} ${phase}）\n`;
+      prompt += `- 贝叶斯预测周期：${avgCycle} 天（${completeRanges.length} 个历史周期加权）\n`;
+      prompt += `- 情绪引导提示：${emotionHint}\n`;
     }
 
     // Symptoms - detailed records
