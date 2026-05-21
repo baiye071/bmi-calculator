@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>健康助手 - 经期日历</title>
 <link rel="stylesheet" href="style.css">
+<script src="js/supabase-client.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/api.js"></script>
+<script src="js/sync.js"></script>
 </head>
 <body>
 <nav>
@@ -14,6 +18,10 @@
     <a href="period.html" class="active">经期日历</a>
     <a href="history.html">历史记录</a>
     <a href="analysis.html">AI 分析</a>
+  </div>
+  <div class="user-menu" id="userMenu" style="display:none">
+    <span id="userEmail" style="font-size:.75em;color:#888"></span>
+    <button class="btn-sm" onclick="signOut()">退出</button>
   </div>
 </nav>
 
@@ -95,37 +103,7 @@ const FLOWS = ['无','微量','少量','中等','大量'];
 const EXERCISES = ['无','散步','瑜伽','跑步','游泳','力量训练','其他'];
 let calYear, calMonth, selectedDate = null;
 
-function getPeriodData() {
-  try {
-    const d = JSON.parse(localStorage.getItem('period_data') || '{}');
-    // Migration: old periods[] → new ranges[]
-    if (d.periods && !d.ranges) {
-      d.ranges = migratePeriodsToRanges(d.periods);
-      d.ovulationDays = d.ovulationDays || [];
-      delete d.periods;
-      savePeriodData(d);
-    }
-    if (!d.ranges) d.ranges = [];
-    if (!d.ovulationDays) d.ovulationDays = [];
-    if (!d.symptoms) d.symptoms = {};
-    return d;
-  } catch { return { ranges: [], ovulationDays: [], symptoms: {} }; }
-}
-function savePeriodData(d) { localStorage.setItem('period_data', JSON.stringify(d)); }
-
-function migratePeriodsToRanges(periods) {
-  if (!periods || !periods.length) return [];
-  const sorted = [...periods].sort();
-  const ranges = [];
-  let start = sorted[0], end = sorted[0];
-  for (let i = 1; i < sorted.length; i++) {
-    const diff = (new Date(sorted[i]) - new Date(end)) / 86400000;
-    if (diff <= 2) { end = sorted[i]; }
-    else { ranges.push({ start, end }); start = sorted[i]; end = sorted[i]; }
-  }
-  ranges.push({ start, end });
-  return ranges;
-}
+// getPeriodData and savePeriodData are now in sync.js
 
 function initCal() {
   const now = new Date();
@@ -140,8 +118,8 @@ function calNav(dir) {
   renderCalendar();
 }
 
-function renderCalendar() {
-  const data = getPeriodData();
+async function renderCalendar() {
+  const data = await getPeriodData();
   const today = new Date();
   const todayStr = fmt(today);
 
@@ -243,12 +221,12 @@ function allPeriodDays(data) {
   return days;
 }
 
-function showPeriodActions(dateStr) {
+async function showPeriodActions(dateStr) {
   const today = new Date();
   today.setHours(0,0,0,0);
   if (new Date(dateStr) > today) return;
 
-  const data = getPeriodData();
+  const data = await getPeriodData();
   const existing = findRange(data, dateStr);
   const pending = data.ranges.find(r => r.start && !r.end);
   const isOvuDay = data.ovulationDays.includes(dateStr);
@@ -326,25 +304,26 @@ function hideActions() {
   renderCalendar();
 }
 
-function openSymptomFromAction() {
+async function openSymptomFromAction() {
   const dateStr = selectedDate;
   document.getElementById('actionPanel').classList.remove('show');
-  showSymptomPanel(dateStr, getPeriodData());
+  const data = await getPeriodData();
+  showSymptomPanel(dateStr, data);
 }
 
-function toggleOvulationDay() {
-  const data = getPeriodData();
+async function toggleOvulationDay() {
+  const data = await getPeriodData();
   const sel = selectedDate;
   const idx = data.ovulationDays.indexOf(sel);
   if (idx >= 0) data.ovulationDays.splice(idx, 1);
   else data.ovulationDays.push(sel);
   data.ovulationDays.sort();
-  savePeriodData(data);
+  await savePeriodData(data);
   hideActions();
 }
 
-function doSetStart() {
-  const data = getPeriodData();
+async function doSetStart() {
+  const data = await getPeriodData();
   const sel = selectedDate;
   const existing = findRange(data, sel);
   const pending = data.ranges.find(r => r.start && !r.end);
@@ -370,12 +349,12 @@ function doSetStart() {
       data.ranges.push({ start: sel, end: null });
     }
   }
-  savePeriodData(data);
+  await savePeriodData(data);
   hideActions();
 }
 
-function doSetEnd() {
-  const data = getPeriodData();
+async function doSetEnd() {
+  const data = await getPeriodData();
   const sel = selectedDate;
   const existing = findRange(data, sel);
   const pending = data.ranges.find(r => r.start && !r.end);
@@ -402,7 +381,7 @@ function doSetEnd() {
       data.ranges.push({ start: sel, end: null });
     }
   }
-  savePeriodData(data);
+  await savePeriodData(data);
   hideActions();
 }
 
@@ -559,10 +538,10 @@ function toggleMood(el) {
   el.classList.add('active');
 }
 
-function saveSymptom() {
+async function saveSymptom() {
   const panel = document.getElementById('symptomPanel');
   const dateStr = panel._dateStr;
-  const data = getPeriodData();
+  const data = await getPeriodData();
   const symptoms = [];
   document.getElementById('symTags').querySelectorAll('.sym-tag.active').forEach(t => symptoms.push(t.textContent));
   const moodEl = document.getElementById('moodTags').querySelector('.sym-tag.active');
@@ -586,8 +565,8 @@ function saveSymptom() {
   } else {
     delete data.symptoms[dateStr];
   }
-  savePeriodData(data);
-  renderCalendar();
+  await savePeriodData(data);
+  await renderCalendar();
   panel.classList.remove('show');
 }
 
@@ -620,8 +599,18 @@ function renderPhaseAdvice(data, predictions, today) {
   container.innerHTML = `<div class="phase-card ${cls}"><div class="phase-title">${icon} ${title}</div>${advice}</div>`;
 }
 
-initCal();
-renderCalendar();
+
+// Auth guard + init
+(async () => {
+  await initSupabase();
+  const session = await getSession();
+  if (session) {
+    document.getElementById('userMenu').style.display = 'flex';
+    document.getElementById('userEmail').textContent = session.user.email;
+  }
+  initCal();
+  await renderCalendar();
+})();
 </script>
 </body>
 </html>

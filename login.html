@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>健康助手 - 登录</title>
+<link rel="stylesheet" href="style.css">
+<script src="js/supabase-client.js"></script>
+<script src="js/auth.js"></script>
+<style>
+.login-card{max-width:380px}
+.tabs{display:flex;gap:0;margin-bottom:20px;background:#f5f5f5;border-radius:10px;padding:3px}
+.tab{flex:1;padding:10px;text-align:center;border-radius:8px;font-size:.9em;font-weight:600;color:#999;cursor:pointer;transition:all .2s}
+.tab.active{background:#fff;color:#667eea;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.error-msg{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;font-size:.82em;margin-bottom:12px;display:none}
+.success-msg{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;font-size:.82em;margin-bottom:12px;display:none}
+</style>
+</head>
+<body>
+<div class="card login-card">
+  <h1>健康助手</h1>
+  <p class="subtitle" id="subtitle">登录你的账号</p>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('login')">登录</div>
+    <div class="tab" onclick="switchTab('register')">注册</div>
+  </div>
+
+  <div id="errorMsg" class="error-msg"></div>
+  <div id="successMsg" class="success-msg"></div>
+
+  <div class="form-group">
+    <label>邮箱</label>
+    <input type="email" id="emailInput" placeholder="your@email.com">
+  </div>
+  <div class="form-group">
+    <label>密码</label>
+    <input type="password" id="passwordInput" placeholder="至少 6 位密码">
+  </div>
+  <div class="form-group" id="confirmGroup" style="display:none">
+    <label>确认密码</label>
+    <input type="password" id="confirmInput" placeholder="再次输入密码">
+  </div>
+
+  <button class="calc-btn" id="submitBtn" onclick="handleSubmit()">登录</button>
+
+  <p style="text-align:center;margin-top:16px;font-size:.78em;color:#999">
+    <a href="index.html" style="color:#667eea;text-decoration:none">游客模式（数据仅保留在本机）</a>
+  </p>
+</div>
+
+<script>
+let currentTab = 'login';
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach((el, i) => {
+    el.classList.toggle('active', (i === 0 && tab === 'login') || (i === 1 && tab === 'register'));
+  });
+  document.getElementById('submitBtn').textContent = tab === 'login' ? '登录' : '注册';
+  document.getElementById('subtitle').textContent = tab === 'login' ? '登录你的账号' : '创建新账号';
+  document.getElementById('confirmGroup').style.display = tab === 'register' ? 'block' : 'none';
+  hideMessages();
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorMsg');
+  el.textContent = msg;
+  el.style.display = 'block';
+  document.getElementById('successMsg').style.display = 'none';
+}
+
+function showSuccess(msg) {
+  const el = document.getElementById('successMsg');
+  el.textContent = msg;
+  el.style.display = 'block';
+  document.getElementById('errorMsg').style.display = 'none';
+}
+
+function hideMessages() {
+  document.getElementById('errorMsg').style.display = 'none';
+  document.getElementById('successMsg').style.display = 'none';
+}
+
+async function handleSubmit() {
+  const email = document.getElementById('emailInput').value.trim();
+  const password = document.getElementById('passwordInput').value;
+  hideMessages();
+
+  if (!email) return showError('请输入邮箱');
+  if (!password || password.length < 6) return showError('密码至少 6 位');
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = currentTab === 'login' ? '登录中...' : '注册中...';
+
+  try {
+    if (currentTab === 'register') {
+      const confirm = document.getElementById('confirmInput').value;
+      if (password !== confirm) {
+        showError('两次密码不一致');
+        return;
+      }
+      await signUp(email, password);
+      showSuccess('注册成功！请检查邮箱确认链接，或直接登录。');
+      switchTab('login');
+    } else {
+      await signIn(email, password);
+      window.location.href = 'index.html';
+    }
+  } catch (err) {
+    const msg = err.message || '操作失败';
+    if (msg.includes('Invalid login credentials')) showError('邮箱或密码错误');
+    else if (msg.includes('already registered')) showError('该邮箱已注册');
+    else if (msg.includes('not confirmed')) showError('请先点击邮箱中的确认链接');
+    else showError(msg);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = currentTab === 'login' ? '登录' : '注册';
+  }
+}
+
+// Enter key to submit
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') handleSubmit();
+});
+
+// If already logged in, redirect
+(async () => {
+  await initSupabase();
+  const session = await getSession();
+  if (session) window.location.href = 'index.html';
+})();
+</script>
+</body>
+</html>

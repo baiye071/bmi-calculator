@@ -7,6 +7,10 @@
 <link rel="stylesheet" href="style.css">
 <script src="config.js"></script>
 <script src="knowledge.js"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/api.js"></script>
+<script src="js/sync.js"></script>
 </head>
 <body>
 <nav>
@@ -16,6 +20,10 @@
     <a href="period.html">经期日历</a>
     <a href="history.html">历史记录</a>
     <a href="analysis.html" class="active">AI 分析</a>
+  </div>
+  <div class="user-menu" id="userMenu" style="display:none">
+    <span id="userEmail" style="font-size:.75em;color:#888"></span>
+    <button class="btn-sm" onclick="signOut()">退出</button>
   </div>
 </nav>
 
@@ -75,32 +83,8 @@ const SYSTEM_PROMPT = `你是一位温暖贴心的健康管理师，兼具医学
    - 如果情绪数据总体平稳 → 表扬她的情绪管理能力
 4. 在报告末尾加一段免责声明，但用温暖的语气而非冷冰冰的法律措辞`;
 
-function getData() {
-  const history = (() => { try { return JSON.parse(localStorage.getItem('bmi_history') || '[]'); } catch { return []; } })();
-  const period = (() => {
-    try {
-      const d = JSON.parse(localStorage.getItem('period_data') || '{}');
-      if (d.periods && !d.ranges) {
-        // Migration: old periods[] → ranges[]
-        const sorted = [...d.periods].sort();
-        const ranges = [];
-        let start = sorted[0], end = sorted[0];
-        for (let i = 1; i < sorted.length; i++) {
-          const diff = (new Date(sorted[i]) - new Date(end)) / 86400000;
-          if (diff <= 2) end = sorted[i];
-          else { ranges.push({ start, end }); start = sorted[i]; end = sorted[i]; }
-        }
-        ranges.push({ start, end });
-        d.ranges = ranges;
-        d.ovulationDays = d.ovulationDays || [];
-        delete d.periods;
-      }
-      if (!d.ranges) d.ranges = [];
-      if (!d.ovulationDays) d.ovulationDays = [];
-      if (!d.symptoms) d.symptoms = {};
-      return d;
-    } catch { return { ranges: [], ovulationDays: [], symptoms: {} }; }
-  })();
+async function getData() {
+  const [history, period] = await Promise.all([getHistory(), getPeriodData()]);
   return { history, period };
 }
 
@@ -343,10 +327,10 @@ function renderSummary(data) {
 
 let fullReport = '';
 
-function saveKey() {
+async function saveKey() {
   const key = document.getElementById('apiKeyInput').value.trim();
   if (!key) return;
-  setApiKey(key);
+  await setApiKey(key);
   document.getElementById('keyStatus').innerHTML = '<span style="color:#22c55e">Key 已保存</span>';
   setTimeout(() => { document.getElementById('keyStatus').innerHTML = ''; }, 2000);
 }
@@ -356,14 +340,14 @@ async function generateReport() {
   const box = document.getElementById('reportBox');
   const actions = document.getElementById('reportActions');
 
-  const apiKey = getApiKey();
+  const apiKey = await getApiKey();
   if (!apiKey) {
     alert('请先输入并保存 API Key');
     document.getElementById('apiKeyInput').focus();
     return;
   }
 
-  const data = getData();
+  const data = await getData();
   const prompt = buildPrompt(data);
   if (!prompt) return alert('暂无数据，请先在首页计算身体数据');
 
@@ -477,8 +461,16 @@ function downloadReport() {
 }
 
 // Init
-document.getElementById('apiKeyInput').value = getApiKey();
-renderSummary(getData());
+(async () => {
+  await initSupabase();
+  const session = await getSession();
+  if (session) {
+    document.getElementById('userMenu').style.display = 'flex';
+    document.getElementById('userEmail').textContent = session.user.email;
+  }
+  document.getElementById('apiKeyInput').value = await getApiKey();
+  renderSummary(await getData());
+})();
 </script>
 </body>
 </html>

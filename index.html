@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>健康助手 - 身体数据计算</title>
 <link rel="stylesheet" href="style.css">
+<script src="js/supabase-client.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/api.js"></script>
+<script src="js/sync.js"></script>
+<script src="js/migrate.js"></script>
 </head>
 <body>
 <nav>
@@ -14,6 +19,10 @@
     <a href="period.html">经期日历</a>
     <a href="history.html">历史记录</a>
     <a href="analysis.html">AI 分析</a>
+  </div>
+  <div class="user-menu" id="userMenu" style="display:none">
+    <span id="userEmail" style="font-size:.75em;color:#888"></span>
+    <button class="btn-sm" onclick="signOut()">退出</button>
   </div>
 </nav>
 
@@ -95,10 +104,7 @@ function setGender(g) {
   document.querySelectorAll('.gender-btn').forEach(b => b.classList.toggle('active', b.dataset.gender === g));
 }
 
-function getHistory() { try { return JSON.parse(localStorage.getItem('bmi_history') || '[]'); } catch { return []; } }
-function saveRecord(r) { const h = getHistory(); h.unshift(r); if (h.length > 100) h.length = 100; localStorage.setItem('bmi_history', JSON.stringify(h)); }
-
-function calculate() {
+async function calculate() {
   const h = parseFloat(document.getElementById('height').value);
   const w = parseFloat(document.getElementById('weight').value);
   const a = parseInt(document.getElementById('age').value);
@@ -228,9 +234,20 @@ function calculate() {
   }
   dietSection.innerHTML = dietHTML;
 
-  saveRecord({ date: new Date().toLocaleString('zh-CN'), bmi: +bmi.toFixed(1), bf: +bfClamped.toFixed(1), tdee: Math.round(tdee), whr: (waist && hip) ? +(waist/hip).toFixed(2) : null, weight: w, height: h, age: a, gender });
+  await saveRecord({ date: new Date().toLocaleString('zh-CN'), bmi: +bmi.toFixed(1), bf: +bfClamped.toFixed(1), tdee: Math.round(tdee), whr: (waist && hip) ? +(waist/hip).toFixed(2) : null, weight: w, height: h, age: a, gender });
 }
 document.addEventListener('keydown', e => { if (e.key === 'Enter') calculate(); });
+
+// Auth guard + init
+(async () => {
+  await initSupabase();
+  const session = await getSession();
+  if (session) {
+    document.getElementById('userMenu').style.display = 'flex';
+    document.getElementById('userEmail').textContent = session.user.email;
+    checkAndOfferMigration();
+  }
+})();
 </script>
 </body>
 </html>

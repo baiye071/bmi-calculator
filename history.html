@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>健康助手 - 历史记录</title>
 <link rel="stylesheet" href="style.css">
+<script src="js/supabase-client.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/api.js"></script>
+<script src="js/sync.js"></script>
 </head>
 <body>
 <nav>
@@ -14,6 +18,10 @@
     <a href="period.html">经期日历</a>
     <a href="history.html" class="active">历史记录</a>
     <a href="analysis.html">AI 分析</a>
+  </div>
+  <div class="user-menu" id="userMenu" style="display:none">
+    <span id="userEmail" style="font-size:.75em;color:#888"></span>
+    <button class="btn-sm" onclick="signOut()">退出</button>
   </div>
 </nav>
 
@@ -30,33 +38,41 @@
   </div>
   <div class="btn-row">
     <button class="btn-sm" onclick="exportData()">导出数据</button>
-    <button class="btn-sm danger" onclick="clearHistory()">清空记录</button>
+    <button class="btn-sm danger" onclick="clearAllHistory()">清空记录</button>
   </div>
   <div class="history-list" id="historyList"></div>
 </div>
 
 <script>
-function getHistory() { try { return JSON.parse(localStorage.getItem('bmi_history') || '[]'); } catch { return []; } }
-
-function renderHistory() {
+async function renderHistory() {
   const list = document.getElementById('historyList');
-  const data = getHistory();
+  const data = await getHistory();
   if (!data.length) { list.innerHTML = '<div class="empty-msg">暂无记录</div>'; drawChart([]); return; }
   list.innerHTML = data.map((r, i) =>
-    `<div class="history-item"><div class="info"><div class="date">${r.date}</div><div class="stats">BMI ${r.bmi} | 体脂 ${r.bf}% | TDEE ${r.tdee} kcal${r.whr ? ' | WHR ' + r.whr : ''}</div></div><button class="del-btn" onclick="delRecord(${i})">&times;</button></div>`
+    `<div class="history-item"><div class="info"><div class="date">${r.date}</div><div class="stats">BMI ${r.bmi} | 体脂 ${r.bf}% | TDEE ${r.tdee} kcal${r.whr ? ' | WHR ' + r.whr : ''}</div></div><button class="del-btn" onclick="deleteRecord(${i})">&times;</button></div>`
   ).join('');
   drawChart(data);
 }
 
-function delRecord(i) {
-  const h = getHistory(); h.splice(i, 1); localStorage.setItem('bmi_history', JSON.stringify(h)); renderHistory();
+async function deleteRecord(i) {
+  if (!confirm('确定删除这条记录？')) return;
+  const local = await getHistory();
+  const record = local[i];
+  local.splice(i, 1);
+  localStorage.setItem('bmi_history', JSON.stringify(local));
+  if (record?.id) {
+    try { await apiFetch('bmi?id=' + record.id, { method: 'DELETE' }); } catch {}
+  }
+  await renderHistory();
 }
-function clearHistory() {
+async function clearAllHistory() {
   if (!confirm('确定清空所有记录？')) return;
-  localStorage.removeItem('bmi_history'); renderHistory();
+  localStorage.removeItem('bmi_history');
+  try { await apiFetch('bmi?all=true', { method: 'DELETE' }); } catch {}
+  await renderHistory();
 }
-function exportData() {
-  const data = getHistory();
+async function exportData() {
+  const data = await getHistory();
   if (!data.length) return alert('暂无数据');
   const csv = '日期,BMI,体脂率,TDEE,腰臀比,体重,身高,年龄,性别\n' +
     data.map(r => `${r.date},${r.bmi},${r.bf},${r.tdee},${r.whr||''},${r.weight},${r.height},${r.age},${r.gender==='male'?'男':'女'}`).join('\n');
@@ -119,7 +135,17 @@ function drawChart(data) {
   for (let i = 0; i <= 4; i++) { const v = bfMin + (1 - i / 4) * (bfMax - bfMin); ctx.fillText(v.toFixed(1) + '%', W - pad.r + 4, pad.t + (i / 4) * ch + 4); }
 }
 
-renderHistory();
+
+// Auth guard + init
+(async () => {
+  await initSupabase();
+  const session = await getSession();
+  if (session) {
+    document.getElementById('userMenu').style.display = 'flex';
+    document.getElementById('userEmail').textContent = session.user.email;
+  }
+  await renderHistory();
+})();
 </script>
 </body>
 </html>
