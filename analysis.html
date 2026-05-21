@@ -66,7 +66,30 @@ const SYSTEM_PROMPT = `你是一位专业的健康管理师和营养师，具备
 
 function getData() {
   const history = (() => { try { return JSON.parse(localStorage.getItem('bmi_history') || '[]'); } catch { return []; } })();
-  const period = (() => { try { return JSON.parse(localStorage.getItem('period_data') || '{"periods":[],"symptoms":{}}'); } catch { return { periods: [], symptoms: {} }; } })();
+  const period = (() => {
+    try {
+      const d = JSON.parse(localStorage.getItem('period_data') || '{}');
+      if (d.periods && !d.ranges) {
+        // Migration: old periods[] → ranges[]
+        const sorted = [...d.periods].sort();
+        const ranges = [];
+        let start = sorted[0], end = sorted[0];
+        for (let i = 1; i < sorted.length; i++) {
+          const diff = (new Date(sorted[i]) - new Date(end)) / 86400000;
+          if (diff <= 2) end = sorted[i];
+          else { ranges.push({ start, end }); start = sorted[i]; end = sorted[i]; }
+        }
+        ranges.push({ start, end });
+        d.ranges = ranges;
+        d.ovulationDays = d.ovulationDays || [];
+        delete d.periods;
+      }
+      if (!d.ranges) d.ranges = [];
+      if (!d.ovulationDays) d.ovulationDays = [];
+      if (!d.symptoms) d.symptoms = {};
+      return d;
+    } catch { return { ranges: [], ovulationDays: [], symptoms: {} }; }
+  })();
   return { history, period };
 }
 
@@ -86,27 +109,19 @@ function buildPrompt(data) {
     age: latest.age,
     weight: latest.weight,
     height: latest.height,
-    hasPeriod: !isMale && data.period.periods && data.period.periods.length > 0
+    hasPeriod: !isMale && data.period.ranges && data.period.ranges.length > 0
   };
 
   // Compute avgCycle for period matching
-  if (userData.hasPeriod) {
-    const periods = [...data.period.periods].sort();
-    const groups = [];
-    let current = [periods[0]];
-    for (let i = 1; i < periods.length; i++) {
-      const diff = (new Date(periods[i]) - new Date(periods[i-1])) / 86400000;
-      if (diff <= 2) current.push(periods[i]);
-      else { groups.push(current); current = [periods[i]]; }
-    }
-    groups.push(current);
-    if (groups.length >= 2) {
+  if (userData.hasPeriod && data.period.ranges.length >= 2) {
+    const sorted = [...data.period.ranges].filter(r => r.start && r.end).sort((a, b) => a.start.localeCompare(b.start));
+    if (sorted.length >= 2) {
       const cycles = [];
-      for (let i = 1; i < groups.length; i++) {
-        const diff = (new Date(groups[i][0]) - new Date(groups[i-1][0])) / 86400000;
+      for (let i = 1; i < sorted.length; i++) {
+        const diff = Math.round((new Date(sorted[i].start) - new Date(sorted[i-1].start)) / 86400000);
         if (diff > 15 && diff < 60) cycles.push(diff);
       }
-      if (cycles.length) userData.avgCycle = Math.round(cycles.reduce((a,b) => a+b, 0) / cycles.length);
+      if (cycles.length) userData.avgCycle = Math.round(cycles.reduce((a, b) => a + b, 0) / cycles.length);
     }
   }
 
@@ -139,49 +154,53 @@ function buildPrompt(data) {
   }
 
   // Period data (female)
-  if (!isMale && data.period.periods && data.period.periods.length > 0) {
-    const periods = [...data.period.periods].sort();
+  const ranges = data.period.ranges || [];
+  if (!isMale && ranges.length > 0) {
+    const completeRanges = ranges.filter(r => r.start && r.end);
     prompt += `\n## 月经周期数据\n`;
-    prompt += `- 记录的经期天数：共 ${periods.length} 天\n`;
-    prompt += `- 最早记录：${periods[0]}\n`;
-    prompt += `- 最近记录：${periods[periods.length - 1]}\n`;
+    prompt += `- 记录周期数：${ranges.length} 次\n`;
+    if (completeRanges.length) {
+      const allDays = completeRanges.reduce((sum, r) => {
+        return sum + Math.round((new Date(r.end) - new Date(r.start)) / 86400000) + 1;
+      }, 0);
+      prompt += `- 经期总天数：${allDays} 天\n`;
+      completeRanges.forEach((r, i) => {
+        const dur = Math.round((new Date(r.end) - new Date(r.start)) / 86400000) + 1;
+        prompt += `- 第${i+1}次：${r.start} ~ ${r.end}（${dur}天）\n`;
+      });
 
-    // Group periods
-    const groups = [];
-    let current = [periods[0]];
-    for (let i = 1; i < periods.length; i++) {
-      const diff = (new Date(periods[i]) - new Date(periods[i-1])) / 86400000;
-      if (diff <= 2) current.push(periods[i]);
-      else { groups.push(current); current = [periods[i]]; }
+      if (completeRanges.length >= 2) {
+        const sorted = [...completeRanges].sort((a, b) => a.start.localeCompare(b.start));
+        const cycles = [];
+        for (let i = 1; i < sorted.length; i++) {
+          const diff = Math.round((new Date(sorted[i].start) - new Date(sorted[i-1].start)) / 86400000);
+          if (diff > 15 && diff < 60) cycles.push(diff);
+        }
+        if (cycles.length) {
+          const avgCycle = Math.round(cycles.reduce((a, b) => a + b, 0) / cycles.length);
+          const avgDuration = Math.round(completeRanges.reduce((s, r) => s + Math.round((new Date(r.end) - new Date(r.start)) / 86400000) + 1, 0) / completeRanges.length);
+          prompt += `- 平均周期：${avgCycle} 天\n`;
+          prompt += `- 平均经期天数：${avgDuration} 天\n`;
+          prompt += `- 各次周期长度：${cycles.join(', ')} 天\n`;
+          if (cycles.some(c => c < 21 || c > 35)) prompt += `- ⚠️ 存在周期异常（<21天或>35天）\n`;
+        }
+      } else {
+        prompt += `- 经期次数不足 2 次，无法计算周期\n`;
+      }
     }
-    groups.push(current);
 
-    if (groups.length >= 2) {
-      prompt += `- 经期次数：${groups.length} 次\n`;
-      const cycles = [];
-      for (let i = 1; i < groups.length; i++) {
-        const diff = (new Date(groups[i][0]) - new Date(groups[i-1][0])) / 86400000;
-        if (diff > 15 && diff < 60) cycles.push(diff);
-      }
-      if (cycles.length) {
-        const avgCycle = Math.round(cycles.reduce((a,b) => a+b, 0) / cycles.length);
-        const avgDuration = Math.round(groups.reduce((a,g) => a + g.length, 0) / groups.length);
-        prompt += `- 平均周期：${avgCycle} 天\n`;
-        prompt += `- 平均经期天数：${avgDuration} 天\n`;
-        prompt += `- 各次周期长度：${cycles.join(', ')} 天\n`;
-        if (cycles.some(c => c < 21 || c > 35)) prompt += `- ⚠️ 存在周期异常（<21天或>35天）\n`;
-      }
-    } else {
-      prompt += `- 经期次数不足 2 次，无法计算周期\n`;
+    // Ovulation days
+    if (data.period.ovulationDays && data.period.ovulationDays.length) {
+      prompt += `- 用户标记排卵日：${data.period.ovulationDays.join(', ')}\n`;
     }
 
     // Symptoms - detailed records
     const symptomEntries = Object.entries(data.period.symptoms || {});
     if (symptomEntries.length) {
-      const periodSet = new Set(data.period.periods);
+      const isPeriodDay = (date) => ranges.some(r => date >= r.start && date <= r.end);
       prompt += `\n### 详细每日记录\n`;
       symptomEntries.sort((a,b) => a[0].localeCompare(b[0])).forEach(([date, s]) => {
-        const isPeriod = periodSet.has(date);
+        const isPeriod = isPeriodDay(date);
         prompt += `- **${date}**${isPeriod ? '（经期）' : ''}：`;
         const parts = [];
         if (s.flow && s.flow !== '无') parts.push('经量:' + s.flow);
@@ -204,7 +223,7 @@ function buildPrompt(data) {
       let energySum = 0, energyCnt = 0, crampsSum = 0, crampsCnt = 0, sleepSum = 0, sleepCnt = 0;
       const periodSymptoms = [], nonPeriodSymptoms = [];
       symptomEntries.forEach(([date, s]) => {
-        const isPeriod = periodSet.has(date);
+        const isPeriod = isPeriodDay(date);
         (s.symptoms || []).forEach(sym => {
           allSymptoms[sym] = (allSymptoms[sym] || 0) + 1;
           (isPeriod ? periodSymptoms : nonPeriodSymptoms).push(sym);
@@ -259,8 +278,8 @@ function renderSummary(data) {
   html += `<span class="label">TDEE</span> <span class="value">${latest.tdee}kcal</span>`;
   if (latest.whr) html += `<span class="sep">|</span><span class="label">腰臀比</span> <span class="value">${latest.whr}</span>`;
   html += `<br><span class="label">历史记录</span> <span class="value">${data.history.length} 条</span>`;
-  if (data.period.periods && data.period.periods.length) {
-    html += `<span class="sep">|</span><span class="label">经期记录</span> <span class="value">${data.period.periods.length} 天</span>`;
+  if (data.period.ranges && data.period.ranges.length) {
+    html += `<span class="sep">|</span><span class="label">经期记录</span> <span class="value">${data.period.ranges.length} 次周期</span>`;
   }
   html += '</div>';
   el.innerHTML = html;

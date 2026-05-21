@@ -96,10 +96,36 @@ const EXERCISES = ['无','散步','瑜伽','跑步','游泳','力量训练','其
 let calYear, calMonth, selectedDate = null;
 
 function getPeriodData() {
-  try { return JSON.parse(localStorage.getItem('period_data') || '{"periods":[],"symptoms":{}}'); }
-  catch { return { periods: [], symptoms: {} }; }
+  try {
+    const d = JSON.parse(localStorage.getItem('period_data') || '{}');
+    // Migration: old periods[] → new ranges[]
+    if (d.periods && !d.ranges) {
+      d.ranges = migratePeriodsToRanges(d.periods);
+      d.ovulationDays = d.ovulationDays || [];
+      delete d.periods;
+      savePeriodData(d);
+    }
+    if (!d.ranges) d.ranges = [];
+    if (!d.ovulationDays) d.ovulationDays = [];
+    if (!d.symptoms) d.symptoms = {};
+    return d;
+  } catch { return { ranges: [], ovulationDays: [], symptoms: {} }; }
 }
 function savePeriodData(d) { localStorage.setItem('period_data', JSON.stringify(d)); }
+
+function migratePeriodsToRanges(periods) {
+  if (!periods || !periods.length) return [];
+  const sorted = [...periods].sort();
+  const ranges = [];
+  let start = sorted[0], end = sorted[0];
+  for (let i = 1; i < sorted.length; i++) {
+    const diff = (new Date(sorted[i]) - new Date(end)) / 86400000;
+    if (diff <= 2) { end = sorted[i]; }
+    else { ranges.push({ start, end }); start = sorted[i]; end = sorted[i]; }
+  }
+  ranges.push({ start, end });
+  return ranges;
+}
 
 function initCal() {
   const now = new Date();
@@ -116,7 +142,6 @@ function calNav(dir) {
 
 function renderCalendar() {
   const data = getPeriodData();
-  const periodSet = new Set(data.periods);
   const today = new Date();
   const todayStr = fmt(today);
 
@@ -130,6 +155,7 @@ function renderCalendar() {
   const predictions = getPredictions(data);
   const predSet = new Set(predictions.predicted);
   const ovuSet = new Set(predictions.ovulation);
+  const userOvuSet = new Set(data.ovulationDays);
   const safeSet = new Set(predictions.safe);
   const dangerSet = new Set(predictions.danger);
 
@@ -139,7 +165,7 @@ function renderCalendar() {
     const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     let cls = 'cal-day';
     if (dateStr === todayStr) cls += ' today';
-    if (periodSet.has(dateStr)) {
+    if (isInAnyRange(data, dateStr)) {
       cls += ' period';
       const rec = data.symptoms[dateStr];
       if (rec && rec.flow) cls += ' flow-' + FLOWS.indexOf(rec.flow);
@@ -150,7 +176,7 @@ function renderCalendar() {
     } else if (safeSet.has(dateStr)) {
       cls += ' safe';
     }
-    if (ovuSet.has(dateStr)) cls += ' ovulation';
+    if (userOvuSet.has(dateStr) || ovuSet.has(dateStr)) cls += ' ovulation';
     if (data.symptoms[dateStr]) cls += ' symptom-dot';
     if (selectedDate === dateStr) cls += ' period-start';
     html += `<div class="${cls}" onclick="showPeriodActions('${dateStr}')"><span class="day-num">${d}</span></div>`;
@@ -164,7 +190,8 @@ function renderCalendar() {
   const nextPeriod = predictions.nextPeriod;
   const daysUntil = nextPeriod ? Math.ceil((new Date(nextPeriod) - today) / 86400000) : null;
   const monthPrefix = `${calYear}-${String(calMonth+1).padStart(2,'0')}`;
-  const monthDays = data.periods.filter(d => d.startsWith(monthPrefix)).length;
+  const allDays = allPeriodDays(data);
+  const monthDays = allDays.filter(d => d.startsWith(monthPrefix)).length;
   document.getElementById('calStats').innerHTML = `
     <div class="stats-card"><div class="val">${cycle}</div><div class="lbl">平均周期（天）</div></div>
     <div class="stats-card"><div class="val">${stats.avgDuration || '--'}</div><div class="lbl">平均经期（天）</div></div>
@@ -179,28 +206,35 @@ function fmt(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
-// --- Period action button logic ---
-function getPeriodRange(data) {
-  if (!data.periods.length) return { start: null, end: null };
-  const sorted = [...data.periods].sort();
-  return { start: sorted[0], end: sorted[sorted.length - 1] };
+// --- Period range helpers ---
+function findRange(data, dateStr) {
+  return data.ranges.find(r => dateStr >= r.start && dateStr <= r.end) || null;
 }
 
-function fillRange(data, startStr, endStr) {
-  const start = new Date(startStr);
+function isInAnyRange(data, dateStr) {
+  return data.ranges.some(r => dateStr >= r.start && dateStr <= r.end);
+}
+
+function latestRange(data) {
+  if (!data.ranges.length) return null;
+  return data.ranges.reduce((a, b) => a.start > b.start ? a : b);
+}
+
+function buildDays(startStr, endStr) {
+  const days = [];
+  const d = new Date(startStr);
   const end = new Date(endStr);
-  if (end < start) return;
-  const d = new Date(start);
   while (d <= end) {
-    const ds = fmt(d);
-    if (!data.periods.includes(ds)) data.periods.push(ds);
+    days.push(fmt(d));
     d.setDate(d.getDate() + 1);
   }
-  data.periods.sort();
+  return days;
 }
 
-function removeOutsideRange(data, keepStart, keepEnd) {
-  data.periods = data.periods.filter(d => d >= keepStart && d <= keepEnd);
+function allPeriodDays(data) {
+  const days = [];
+  for (const r of data.ranges) days.push(...buildDays(r.start, r.end));
+  return days;
 }
 
 function showPeriodActions(dateStr) {
@@ -209,68 +243,57 @@ function showPeriodActions(dateStr) {
   if (new Date(dateStr) > today) return;
 
   const data = getPeriodData();
-  const range = getPeriodRange(data);
-  const hasStart = !!range.start;
-  const hasEnd = !!range.end;
+  const existing = findRange(data, dateStr);
+  const pending = data.ranges.find(r => r.start && !r.end);
+  const isOvuDay = data.ovulationDays.includes(dateStr);
+
+  let range = existing || pending;
+  const hasRange = !!range;
+  const hasEnd = hasRange && !!range.end;
   const selDate = dateStr;
 
   let startDisabled = false, startHint = '';
   let endDisabled = false, endHint = '';
 
-  if (hasStart && hasEnd) {
-    // Scenario 3: both set
+  if (hasRange && hasEnd) {
     if (selDate === range.start) {
-      startHint = '重置开始日'; endHint = '清除全部，设为结束日';
+      startHint = '重置开始日'; endHint = '删除整个周期';
     } else if (selDate === range.end) {
-      startHint = '清除全部，设为开始日'; endHint = '重置结束日';
+      startHint = '删除整个周期'; endHint = '重置结束日';
     } else if (selDate > range.start && selDate < range.end) {
       startHint = '缩短至新开始日'; endHint = '缩短至新结束日';
     } else if (selDate < range.start) {
-      const preDays = Math.round(7 * (getStats(data).avgCycle || 30) / 30);
-      if ((new Date(range.start) - new Date(selDate)) / 86400000 <= preDays + 1) {
-        startHint = '延长经期开始'; endHint = '清除全部，仅保留结束日';
-      } else {
-        startHint = '设为新周期开始日'; endHint = '清除全部，仅保留结束日';
-      }
+      startHint = '设为新周期'; endHint = '删除此周期';
     } else {
-      const postDays = Math.round(8 * (getStats(data).avgCycle || 30) / 30);
-      if ((new Date(selDate) - new Date(range.end)) / 86400000 <= postDays + 1) {
-        startHint = '清除全部，仅保留开始日'; endHint = '延长经期结束';
-      } else {
-        startHint = '清除全部，仅保留开始日'; endHint = '设为新周期结束日';
-      }
+      startHint = '删除此周期'; endHint = '设为新周期';
     }
-  } else if (hasStart && !hasEnd) {
-    // Scenario 4: only start set
+  } else if (hasRange && !hasEnd) {
     if (selDate < range.start) {
       startHint = '提前开始日'; endHint = '结束日需晚于开始日'; endDisabled = true;
     } else if (selDate === range.start) {
-      startHint = '取消开始日'; endHint = '改设为结束日';
+      startHint = '取消'; endHint = '改设为结束日';
     } else {
-      startHint = '推迟开始日'; endHint = '设为结束日，计算周期';
-    }
-  } else if (!hasStart && hasEnd) {
-    // Scenario 5: only end set
-    if (selDate < range.end) {
-      startHint = '设为开始日，计算周期'; endHint = '缩短结束日';
-    } else if (selDate === range.end) {
-      startHint = '设为开始日'; endHint = '取消结束日';
-    } else {
-      startHint = '开始日需早于结束日'; startDisabled = true; endHint = '推迟结束日';
+      startHint = '推迟开始日'; endHint = '设为结束日';
     }
   } else {
-    // Scenario 2: nothing set
     startHint = '设为经期开始日'; endHint = '设为经期结束日';
   }
 
   selectedDate = selDate;
+  const isPeriodDay = isInAnyRange(data, selDate);
   const panel = document.getElementById('actionPanel');
-  const isPeriodDay = data.periods.includes(selDate);
+  let rangeInfo = '';
+  if (data.ranges.length) {
+    rangeInfo = data.ranges.map((r, i) =>
+      `<span style="font-size:.72em;color:#888">${r.start} ~ ${r.end || '未结束'}</span>`
+    ).join('<br>');
+  }
   panel.innerHTML = `
     <div style="font-size:.82em;color:#555;margin-bottom:8px;text-align:center">
       <b>${selDate}</b>
-      ${hasStart ? ' · 当前开始：' + range.start : ''}${hasEnd ? ' · 当前结束：' + range.end : ''}
+      ${hasRange && hasEnd ? ' · 当前周期：' + range.start + ' ~ ' + range.end : ''}
     </div>
+    ${data.ranges.length > 1 ? '<div style="text-align:center;margin-bottom:8px">' + rangeInfo + '</div>' : ''}
     <div style="display:flex;gap:10px">
       <button class="action-btn action-start" onclick="doSetStart()" ${startDisabled ? 'disabled' : ''}>
         <span style="font-size:1.1em">&#128309;</span> 月经开始
@@ -281,7 +304,10 @@ function showPeriodActions(dateStr) {
         <div style="font-size:.7em;opacity:.8;margin-top:2px">${endHint}</div>
       </button>
     </div>
-    ${isPeriodDay ? '<button class="action-btn" style="width:100%;margin-top:8px;background:#f5f5f5;color:#555" onclick="openSymptomFromAction()">记录症状</button>' : ''}
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="action-btn" style="flex:1;background:${isOvuDay ? '#e3f2fd' : '#f5f5f5'};color:${isOvuDay ? '#1976d2' : '#555'};border:${isOvuDay ? '1.5px solid #90caf9' : 'none'}" onclick="toggleOvulationDay()">${isOvuDay ? '取消排卵日' : '标记为排卵日'}</button>
+      ${isPeriodDay ? '<button class="action-btn" style="flex:1;background:#f5f5f5;color:#555" onclick="openSymptomFromAction()">记录症状</button>' : ''}
+    </div>
     <button style="width:100%;margin-top:8px;padding:6px;border:none;background:none;color:#999;font-size:.75em;cursor:pointer" onclick="hideActions()">取消</button>
   `;
   panel.classList.add('show');
@@ -300,53 +326,42 @@ function openSymptomFromAction() {
   showSymptomPanel(dateStr, getPeriodData());
 }
 
+function toggleOvulationDay() {
+  const data = getPeriodData();
+  const sel = selectedDate;
+  const idx = data.ovulationDays.indexOf(sel);
+  if (idx >= 0) data.ovulationDays.splice(idx, 1);
+  else data.ovulationDays.push(sel);
+  data.ovulationDays.sort();
+  savePeriodData(data);
+  hideActions();
+}
+
 function doSetStart() {
   const data = getPeriodData();
-  const range = getPeriodRange(data);
   const sel = selectedDate;
+  const existing = findRange(data, sel);
+  const pending = data.ranges.find(r => r.start && !r.end);
+  const range = existing || pending;
 
-  if (!range.start && !range.end) {
-    // Nothing set → set start only
-    data.periods = [sel];
-  } else if (range.start && !range.end) {
-    // Only start set
-    if (sel < range.start) {
-      // 4-1: move start earlier
-      data.periods = [sel];
-    } else if (sel === range.start) {
-      // 4-2: cancel start
-      data.periods = [];
-    } else {
-      // 4-3: move start later
-      data.periods = [sel];
-    }
-  } else if (!range.start && range.end) {
-    // Only end set
-    if (sel > range.end) {
-      // 5-3: invalid
-      hideActions(); return;
-    }
-    // 5-1, 5-2: set start + fill
-    data.periods = [sel];
-    fillRange(data, sel, range.end);
-  } else {
-    // Both set (scenario 3)
+  if (!range) {
+    // New range
+    data.ranges.push({ start: sel, end: null });
+  } else if (!range.end) {
+    // Pending range only
     if (sel === range.start) {
-      // 3-1: keep end only
-      data.periods = [range.end];
-    } else if (sel === range.end) {
-      // 3-2: set as new start
-      data.periods = [sel];
-    } else if (sel > range.start && sel < range.end) {
-      // 3-3: new start, keep end
-      removeOutsideRange(data, sel, range.end);
-    } else if (sel < range.start) {
-      // 3-4: extend start earlier, keep end
-      data.periods = [sel];
-      fillRange(data, sel, range.end);
+      data.ranges = data.ranges.filter(r => r !== range);
     } else {
-      // 3-5: keep start only
-      data.periods = [range.start];
+      range.start = sel;
+    }
+  } else {
+    // Complete range exists
+    if (sel === range.start || sel === range.end) {
+      data.ranges = data.ranges.filter(r => r !== range);
+    } else if (sel > range.start && sel < range.end) {
+      range.start = sel;
+    } else {
+      data.ranges.push({ start: sel, end: null });
     }
   }
   savePeriodData(data);
@@ -355,114 +370,75 @@ function doSetStart() {
 
 function doSetEnd() {
   const data = getPeriodData();
-  const range = getPeriodRange(data);
   const sel = selectedDate;
+  const existing = findRange(data, sel);
+  const pending = data.ranges.find(r => r.start && !r.end);
+  const range = existing || pending;
 
-  if (!range.start && !range.end) {
-    // Nothing set → set end only
-    data.periods = [sel];
-  } else if (range.start && !range.end) {
-    // Only start set
+  if (!range) {
+    data.ranges.push({ start: sel, end: null });
+  } else if (!range.end) {
     if (sel < range.start) {
-      // 4-1: invalid
       alert('月经结束时间需要大于月经开始时间'); return;
     } else if (sel === range.start) {
-      // 4-2: swap to end
-      data.periods = [sel];
+      range.end = null;
     } else {
-      // 4-3: set end + fill
-      data.periods = [range.start];
-      fillRange(data, range.start, sel);
-    }
-  } else if (!range.start && range.end) {
-    // Only end set
-    if (sel < range.end) {
-      // 5-1: new end earlier
-      data.periods = [sel];
-    } else if (sel === range.end) {
-      // 5-2: cancel end
-      data.periods = [];
-    } else {
-      // 5-3: move end later
-      data.periods = [sel];
+      range.end = sel;
     }
   } else {
-    // Both set (scenario 3)
     if (sel === range.start) {
-      // 3-1: clear all, set as end
-      data.periods = [sel];
+      data.ranges = data.ranges.filter(r => r !== range);
     } else if (sel === range.end) {
-      // 3-2: keep start only
-      data.periods = [range.start];
+      range.end = null;
     } else if (sel > range.start && sel < range.end) {
-      // 3-3: keep start, new end
-      removeOutsideRange(data, range.start, sel);
-    } else if (sel < range.start) {
-      // 3-4: keep end only
-      data.periods = [range.end];
+      range.end = sel;
     } else {
-      // 3-5: extend end later, keep start
-      data.periods = [range.start];
-      fillRange(data, range.start, sel);
+      data.ranges.push({ start: sel, end: null });
     }
   }
   savePeriodData(data);
   hideActions();
 }
 
-function getPeriodGroups(data) {
-  if (!data.periods.length) return [];
-  const sorted = [...data.periods].sort();
-  const groups = [[sorted[0]]];
-  for (let i = 1; i < sorted.length; i++) {
-    const prev = new Date(sorted[i-1]);
-    const curr = new Date(sorted[i]);
-    const diff = (curr - prev) / 86400000;
-    if (diff <= 2) groups[groups.length - 1].push(sorted[i]);
-    else groups.push([sorted[i]]);
-  }
-  return groups;
-}
-
 function getStats(data) {
-  const groups = getPeriodGroups(data);
-  if (groups.length < 2) {
-    const avgDuration = groups.length ? groups[0].length : null;
+  const ranges = data.ranges.filter(r => r.start && r.end);
+  if (ranges.length < 2) {
+    const avgDuration = ranges.length ?
+      Math.round((new Date(ranges[0].end) - new Date(ranges[0].start)) / 86400000) + 1 : null;
     return { avgCycle: null, avgDuration };
   }
+  const sorted = [...ranges].sort((a, b) => a.start.localeCompare(b.start));
   const cycles = [];
-  for (let i = 1; i < groups.length; i++) {
-    const diff = (new Date(groups[i][0]) - new Date(groups[i-1][0])) / 86400000;
+  for (let i = 1; i < sorted.length; i++) {
+    const diff = Math.round((new Date(sorted[i].start) - new Date(sorted[i-1].start)) / 86400000);
     if (diff > 15 && diff < 60) cycles.push(diff);
   }
-  const durations = groups.map(g => g.length);
+  const durations = sorted.map(r => Math.round((new Date(r.end) - new Date(r.start)) / 86400000) + 1);
   return {
-    avgCycle: cycles.length ? Math.round(cycles.reduce((a,b) => a+b, 0) / cycles.length) : null,
-    avgDuration: Math.round(durations.reduce((a,b) => a+b, 0) / durations.length)
+    avgCycle: cycles.length ? Math.round(cycles.reduce((a, b) => a + b, 0) / cycles.length) : null,
+    avgDuration: Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
   };
 }
 
 function getPredictions(data) {
-  const groups = getPeriodGroups(data);
   const stats = getStats(data);
   const result = { predicted: [], ovulation: [], nextPeriod: null, safe: [], danger: [] };
-  if (!groups.length) return result;
+  const last = latestRange(data);
+  if (!last || !last.end) return result;
 
   const cycle = stats.avgCycle || 30;
   const duration = stats.avgDuration || 5;
   const today = new Date();
-  today.setHours(0,0,0,0);
-  const lastStart = new Date(groups[groups.length - 1][0]);
-  const lastEnd = new Date(groups[groups.length - 1][groups[groups.length - 1].length - 1]);
+  today.setHours(0, 0, 0, 0);
+  const lastStart = new Date(last.start);
+  const lastEnd = new Date(last.end);
 
-  // Find the next future period
+  // Next period
   let nextStart = new Date(lastStart);
-  while (nextStart <= today) {
-    nextStart.setDate(nextStart.getDate() + cycle);
-  }
+  while (nextStart <= today) nextStart.setDate(nextStart.getDate() + cycle);
   result.nextPeriod = fmt(nextStart);
 
-  // Predict next 3 future periods
+  // Predict 3 future periods
   for (let p = 0; p < 3; p++) {
     const pStart = new Date(lastStart);
     pStart.setDate(pStart.getDate() + cycle * (p + 1));
@@ -476,7 +452,7 @@ function getPredictions(data) {
       if (dd > today) result.predicted.push(fmt(dd));
     }
 
-    // Ovulation: ~14 days before next period
+    // Ovulation: ~14 days before predicted period
     const ovu = new Date(pStart);
     ovu.setDate(ovu.getDate() - 14);
     for (let d = -1; d <= 1; d++) {
@@ -485,23 +461,20 @@ function getPredictions(data) {
       if (od > today) result.ovulation.push(fmt(od));
     }
 
-    // Safe period: 前7后8 (proportional to cycle length)
+    // Safe: 前7后8 (proportional)
     const preDays = Math.round(7 * cycle / 30);
     const postDays = Math.round(8 * cycle / 30);
-
-    // Pre-period safe: 7 days before period start
     for (let d = 1; d <= preDays; d++) {
       const sd = new Date(pStart);
       sd.setDate(sd.getDate() - d);
       if (sd > today) result.safe.push(fmt(sd));
     }
-    // Post-period safe: 8 days after period end
     for (let d = 1; d <= postDays; d++) {
       const sd = new Date(pEnd);
       sd.setDate(sd.getDate() + d);
       if (sd > today) result.safe.push(fmt(sd));
     }
-    // Danger: between post-safe end and pre-safe start (ovulation window)
+
     const dangerStart = new Date(pEnd);
     dangerStart.setDate(dangerStart.getDate() + postDays + 1);
     const dangerEnd = new Date(pStart);
@@ -590,14 +563,14 @@ function saveSymptom() {
 
 function renderPhaseAdvice(data, predictions, today) {
   const container = document.getElementById('phaseAdvice');
-  const groups = getPeriodGroups(data);
-  if (!groups.length || !predictions.nextPeriod) {
-    container.innerHTML = '<div style="text-align:center;color:#bbb;font-size:.82em;padding:16px">标记经期日后显示阶段建议</div>';
+  const last = latestRange(data);
+  if (!last || !last.end || !predictions.nextPeriod) {
+    container.innerHTML = '<div style="text-align:center;color:#bbb;font-size:.82em;padding:16px">标记经期开始和结束后显示阶段建议</div>';
     return;
   }
   const stats = getStats(data);
-  const cycle = stats.avgCycle || 28;
-  const lastStart = new Date(groups[groups.length - 1][0]);
+  const cycle = stats.avgCycle || 30;
+  const lastStart = new Date(last.start);
   const dayInCycle = Math.floor((today - lastStart) / 86400000) + 1;
 
   let cls, icon, title, advice;
