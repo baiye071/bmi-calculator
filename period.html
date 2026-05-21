@@ -186,8 +186,7 @@ function getPeriodRange(data) {
   return { start: sorted[0], end: sorted[sorted.length - 1] };
 }
 
-function fillRange(startStr, endStr) {
-  const data = getPeriodData();
+function fillRange(data, startStr, endStr) {
   const start = new Date(startStr);
   const end = new Date(endStr);
   if (end < start) return;
@@ -198,13 +197,10 @@ function fillRange(startStr, endStr) {
     d.setDate(d.getDate() + 1);
   }
   data.periods.sort();
-  savePeriodData(data);
 }
 
-function removeOutsideRange(keepStart, keepEnd) {
-  const data = getPeriodData();
+function removeOutsideRange(data, keepStart, keepEnd) {
   data.periods = data.periods.filter(d => d >= keepStart && d <= keepEnd);
-  savePeriodData(data);
 }
 
 function showPeriodActions(dateStr) {
@@ -331,8 +327,8 @@ function doSetStart() {
       hideActions(); return;
     }
     // 5-1, 5-2: set start + fill
-    data.periods = [sel, range.end];
-    fillRange(sel, range.end);
+    data.periods = [sel];
+    fillRange(data, sel, range.end);
   } else {
     // Both set (scenario 3)
     if (sel === range.start) {
@@ -343,10 +339,11 @@ function doSetStart() {
       data.periods = [sel];
     } else if (sel > range.start && sel < range.end) {
       // 3-3: new start, keep end
-      removeOutsideRange(sel, range.end);
+      removeOutsideRange(data, sel, range.end);
     } else if (sel < range.start) {
       // 3-4: extend start earlier, keep end
-      fillRange(sel, range.end);
+      data.periods = [sel];
+      fillRange(data, sel, range.end);
     } else {
       // 3-5: keep start only
       data.periods = [range.start];
@@ -374,8 +371,8 @@ function doSetEnd() {
       data.periods = [sel];
     } else {
       // 4-3: set end + fill
-      data.periods = [range.start, sel];
-      fillRange(range.start, sel);
+      data.periods = [range.start];
+      fillRange(data, range.start, sel);
     }
   } else if (!range.start && range.end) {
     // Only end set
@@ -399,13 +396,14 @@ function doSetEnd() {
       data.periods = [range.start];
     } else if (sel > range.start && sel < range.end) {
       // 3-3: keep start, new end
-      removeOutsideRange(range.start, sel);
+      removeOutsideRange(data, range.start, sel);
     } else if (sel < range.start) {
       // 3-4: keep end only
       data.periods = [range.end];
     } else {
       // 3-5: extend end later, keep start
-      fillRange(range.start, sel);
+      data.periods = [range.start];
+      fillRange(data, range.start, sel);
     }
   }
   savePeriodData(data);
