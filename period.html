@@ -30,6 +30,7 @@
   <div id="calHint" style="text-align:center;font-size:.72em;color:#e91e63;margin-bottom:8px;min-height:16px"></div>
   <div class="cal-grid" id="calGrid"></div>
   <div class="stats-row" id="calStats"></div>
+  <div class="action-panel" id="actionPanel"></div>
   <div id="calLegend" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;font-size:.68em;color:#888;margin-bottom:12px">
     <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#e91e63;vertical-align:middle;margin-right:3px"></span>经期</span>
     <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#f48fb1;opacity:.5;vertical-align:middle;margin-right:3px;border:1.5px dashed #f48fb1"></span>预测经期</span>
@@ -92,7 +93,7 @@ const SYMPTOMS = ['痛经','头痛','疲劳','情绪波动','腰酸','食欲变�
 const MOODS = ['😊 正常','😔 低落','😤 烦躁','😴 嗜睡','🥰 愉快','😰 焦虑','😭 哭泣倾向','🤯 压力大'];
 const FLOWS = ['无','微量','少量','中等','大量'];
 const EXERCISES = ['无','散步','瑜伽','跑步','游泳','力量训练','其他'];
-let calYear, calMonth, selectedDate = null, periodStart = null;
+let calYear, calMonth, selectedDate = null;
 
 function getPeriodData() {
   try { return JSON.parse(localStorage.getItem('period_data') || '{"periods":[],"symptoms":{}}'); }
@@ -120,7 +121,7 @@ function renderCalendar() {
   const todayStr = fmt(today);
 
   document.getElementById('calMonth').textContent = `${calYear}年${calMonth + 1}月`;
-  document.getElementById('calHint').textContent = periodStart ? `已选开始日 ${periodStart}，请点击结束日` : '点击日期标记经期开始日，再点结束日自动填充';
+  document.getElementById('calHint').textContent = '点击日期设置月经开始或结束';
 
   const first = new Date(calYear, calMonth, 1);
   const last = new Date(calYear, calMonth + 1, 0);
@@ -151,8 +152,8 @@ function renderCalendar() {
     }
     if (ovuSet.has(dateStr)) cls += ' ovulation';
     if (data.symptoms[dateStr]) cls += ' symptom-dot';
-    if (periodStart === dateStr) cls += ' period-start';
-    html += `<div class="${cls}" onclick="togglePeriod('${dateStr}')"><span class="day-num">${d}</span></div>`;
+    if (selectedDate === dateStr) cls += ' period-start';
+    html += `<div class="${cls}" onclick="showPeriodActions('${dateStr}')"><span class="day-num">${d}</span></div>`;
   }
   document.getElementById('calGrid').innerHTML = html;
 
@@ -178,25 +179,18 @@ function fmt(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
-function togglePeriod(dateStr) {
+// --- Period action button logic ---
+function getPeriodRange(data) {
+  if (!data.periods.length) return { start: null, end: null };
+  const sorted = [...data.periods].sort();
+  return { start: sorted[0], end: sorted[sorted.length - 1] };
+}
+
+function fillRange(startStr, endStr) {
   const data = getPeriodData();
-  if (data.periods.includes(dateStr)) {
-    data.periods = data.periods.filter(d => d !== dateStr);
-    periodStart = null;
-    selectedDate = null;
-    document.getElementById('symptomPanel').classList.remove('show');
-    savePeriodData(data);
-    renderCalendar();
-    return;
-  }
-  if (!periodStart) {
-    periodStart = dateStr;
-    renderCalendar();
-    return;
-  }
-  const start = new Date(periodStart);
-  const end = new Date(dateStr);
-  if (end < start) { start.setTime(end.getTime()); end.setTime(new Date(periodStart).getTime()); }
+  const start = new Date(startStr);
+  const end = new Date(endStr);
+  if (end < start) return;
   const d = new Date(start);
   while (d <= end) {
     const ds = fmt(d);
@@ -204,9 +198,218 @@ function togglePeriod(dateStr) {
     d.setDate(d.getDate() + 1);
   }
   data.periods.sort();
-  periodStart = null;
   savePeriodData(data);
+}
+
+function removeOutsideRange(keepStart, keepEnd) {
+  const data = getPeriodData();
+  data.periods = data.periods.filter(d => d >= keepStart && d <= keepEnd);
+  savePeriodData(data);
+}
+
+function showPeriodActions(dateStr) {
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  if (new Date(dateStr) > today) return;
+
+  const data = getPeriodData();
+  const range = getPeriodRange(data);
+  const hasStart = !!range.start;
+  const hasEnd = !!range.end;
+  const selDate = dateStr;
+
+  let startDisabled = false, startHint = '';
+  let endDisabled = false, endHint = '';
+
+  if (hasStart && hasEnd) {
+    // Scenario 3: both set
+    if (selDate === range.start) {
+      startHint = '重置开始日'; endHint = '清除全部，设为结束日';
+    } else if (selDate === range.end) {
+      startHint = '清除全部，设为开始日'; endHint = '重置结束日';
+    } else if (selDate > range.start && selDate < range.end) {
+      startHint = '缩短至新开始日'; endHint = '缩短至新结束日';
+    } else if (selDate < range.start) {
+      const preDays = Math.round(7 * (getStats(data).avgCycle || 30) / 30);
+      if ((new Date(range.start) - new Date(selDate)) / 86400000 <= preDays + 1) {
+        startHint = '延长经期开始'; endHint = '清除全部，仅保留结束日';
+      } else {
+        startHint = '设为新周期开始日'; endHint = '清除全部，仅保留结束日';
+      }
+    } else {
+      const postDays = Math.round(8 * (getStats(data).avgCycle || 30) / 30);
+      if ((new Date(selDate) - new Date(range.end)) / 86400000 <= postDays + 1) {
+        startHint = '清除全部，仅保留开始日'; endHint = '延长经期结束';
+      } else {
+        startHint = '清除全部，仅保留开始日'; endHint = '设为新周期结束日';
+      }
+    }
+  } else if (hasStart && !hasEnd) {
+    // Scenario 4: only start set
+    if (selDate < range.start) {
+      startHint = '提前开始日'; endHint = '结束日需晚于开始日'; endDisabled = true;
+    } else if (selDate === range.start) {
+      startHint = '取消开始日'; endHint = '改设为结束日';
+    } else {
+      startHint = '推迟开始日'; endHint = '设为结束日，计算周期';
+    }
+  } else if (!hasStart && hasEnd) {
+    // Scenario 5: only end set
+    if (selDate < range.end) {
+      startHint = '设为开始日，计算周期'; endHint = '缩短结束日';
+    } else if (selDate === range.end) {
+      startHint = '设为开始日'; endHint = '取消结束日';
+    } else {
+      startHint = '开始日需早于结束日'; startDisabled = true; endHint = '推迟结束日';
+    }
+  } else {
+    // Scenario 2: nothing set
+    startHint = '设为经期开始日'; endHint = '设为经期结束日';
+  }
+
+  selectedDate = selDate;
+  const panel = document.getElementById('actionPanel');
+  const isPeriodDay = data.periods.includes(selDate);
+  panel.innerHTML = `
+    <div style="font-size:.82em;color:#555;margin-bottom:8px;text-align:center">
+      <b>${selDate}</b>
+      ${hasStart ? ' · 当前开始：' + range.start : ''}${hasEnd ? ' · 当前结束：' + range.end : ''}
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="action-btn action-start" onclick="doSetStart()" ${startDisabled ? 'disabled' : ''}>
+        <span style="font-size:1.1em">&#128309;</span> 月经开始
+        <div style="font-size:.7em;opacity:.8;margin-top:2px">${startHint}</div>
+      </button>
+      <button class="action-btn action-end" onclick="doSetEnd()" ${endDisabled ? 'disabled' : ''}>
+        <span style="font-size:1.1em">&#128310;</span> 月经结束
+        <div style="font-size:.7em;opacity:.8;margin-top:2px">${endHint}</div>
+      </button>
+    </div>
+    ${isPeriodDay ? '<button class="action-btn" style="width:100%;margin-top:8px;background:#f5f5f5;color:#555" onclick="openSymptomFromAction()">记录症状</button>' : ''}
+    <button style="width:100%;margin-top:8px;padding:6px;border:none;background:none;color:#999;font-size:.75em;cursor:pointer" onclick="hideActions()">取消</button>
+  `;
+  panel.classList.add('show');
+  document.getElementById('symptomPanel').classList.remove('show');
+}
+
+function hideActions() {
+  selectedDate = null;
+  document.getElementById('actionPanel').classList.remove('show');
   renderCalendar();
+}
+
+function openSymptomFromAction() {
+  const dateStr = selectedDate;
+  document.getElementById('actionPanel').classList.remove('show');
+  showSymptomPanel(dateStr, getPeriodData());
+}
+
+function doSetStart() {
+  const data = getPeriodData();
+  const range = getPeriodRange(data);
+  const sel = selectedDate;
+
+  if (!range.start && !range.end) {
+    // Nothing set → set start only
+    data.periods = [sel];
+  } else if (range.start && !range.end) {
+    // Only start set
+    if (sel < range.start) {
+      // 4-1: move start earlier
+      data.periods = [sel];
+    } else if (sel === range.start) {
+      // 4-2: cancel start
+      data.periods = [];
+    } else {
+      // 4-3: move start later
+      data.periods = [sel];
+    }
+  } else if (!range.start && range.end) {
+    // Only end set
+    if (sel > range.end) {
+      // 5-3: invalid
+      hideActions(); return;
+    }
+    // 5-1, 5-2: set start + fill
+    data.periods = [sel, range.end];
+    fillRange(sel, range.end);
+  } else {
+    // Both set (scenario 3)
+    if (sel === range.start) {
+      // 3-1: keep end only
+      data.periods = [range.end];
+    } else if (sel === range.end) {
+      // 3-2: set as new start
+      data.periods = [sel];
+    } else if (sel > range.start && sel < range.end) {
+      // 3-3: new start, keep end
+      removeOutsideRange(sel, range.end);
+    } else if (sel < range.start) {
+      // 3-4: extend start earlier, keep end
+      fillRange(sel, range.end);
+    } else {
+      // 3-5: keep start only
+      data.periods = [range.start];
+    }
+  }
+  savePeriodData(data);
+  hideActions();
+}
+
+function doSetEnd() {
+  const data = getPeriodData();
+  const range = getPeriodRange(data);
+  const sel = selectedDate;
+
+  if (!range.start && !range.end) {
+    // Nothing set → set end only
+    data.periods = [sel];
+  } else if (range.start && !range.end) {
+    // Only start set
+    if (sel < range.start) {
+      // 4-1: invalid
+      alert('月经结束时间需要大于月经开始时间'); return;
+    } else if (sel === range.start) {
+      // 4-2: swap to end
+      data.periods = [sel];
+    } else {
+      // 4-3: set end + fill
+      data.periods = [range.start, sel];
+      fillRange(range.start, sel);
+    }
+  } else if (!range.start && range.end) {
+    // Only end set
+    if (sel < range.end) {
+      // 5-1: new end earlier
+      data.periods = [sel];
+    } else if (sel === range.end) {
+      // 5-2: cancel end
+      data.periods = [];
+    } else {
+      // 5-3: move end later
+      data.periods = [sel];
+    }
+  } else {
+    // Both set (scenario 3)
+    if (sel === range.start) {
+      // 3-1: clear all, set as end
+      data.periods = [sel];
+    } else if (sel === range.end) {
+      // 3-2: keep start only
+      data.periods = [range.start];
+    } else if (sel > range.start && sel < range.end) {
+      // 3-3: keep start, new end
+      removeOutsideRange(range.start, sel);
+    } else if (sel < range.start) {
+      // 3-4: keep end only
+      data.periods = [range.end];
+    } else {
+      // 3-5: extend end later, keep start
+      fillRange(range.start, sel);
+    }
+  }
+  savePeriodData(data);
+  hideActions();
 }
 
 function getPeriodGroups(data) {
