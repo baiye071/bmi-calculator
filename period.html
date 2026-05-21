@@ -34,20 +34,57 @@
   <div class="symptom-panel" id="symptomPanel">
     <div class="symptom-date" id="symDate"></div>
     <div class="symptom-section">
-      <div class="lbl">症状</div>
+      <div class="lbl">经量</div>
+      <div class="symptom-tags" id="flowTags"></div>
+    </div>
+    <div class="symptom-section">
+      <div class="lbl">症状（可多选）</div>
       <div class="symptom-tags" id="symTags"></div>
     </div>
     <div class="symptom-section">
       <div class="lbl">心情</div>
       <div class="symptom-tags" id="moodTags"></div>
     </div>
+    <div class="symptom-section">
+      <div class="lbl">精力等级</div>
+      <div class="symptom-tags" id="energyTags"></div>
+    </div>
+    <div class="symptom-section">
+      <div class="lbl">痛经程度</div>
+      <div class="symptom-tags" id="crampsTags"></div>
+    </div>
+    <div class="symptom-row">
+      <div class="symptom-section" style="flex:1">
+        <div class="lbl">睡眠（小时）</div>
+        <input type="number" id="sleepInput" min="0" max="24" step="0.5" placeholder="如 7.5" style="width:100%;padding:8px 10px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:.82em;outline:none">
+      </div>
+      <div class="symptom-section" style="flex:1">
+        <div class="lbl">体重（kg）</div>
+        <input type="number" id="weightInput" min="20" max="300" step="0.1" placeholder="可选" style="width:100%;padding:8px 10px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:.82em;outline:none">
+      </div>
+    </div>
+    <div class="symptom-section">
+      <div class="lbl">运动</div>
+      <div class="symptom-tags" id="exerciseTags"></div>
+      <input type="number" id="exerciseMinInput" min="0" max="600" step="5" placeholder="时长（分钟）" style="width:100%;padding:8px 10px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:.82em;outline:none;margin-top:6px">
+    </div>
+    <div class="symptom-section">
+      <div class="lbl">饮食备注</div>
+      <input type="text" id="dietInput" placeholder="如：红糖姜茶、冰淇淋..." style="width:100%;padding:8px 10px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:.82em;outline:none">
+    </div>
+    <div class="symptom-section">
+      <div class="lbl">每日备注</div>
+      <input type="text" id="notesInput" placeholder="其他想记录的..." style="width:100%;padding:8px 10px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:.82em;outline:none">
+    </div>
     <button class="sym-save-btn" onclick="saveSymptom()">保存</button>
   </div>
 </div>
 
 <script>
-const SYMPTOMS = ['痛经','头痛','疲劳','情绪波动','腰酸','食欲变化','乳房胀痛','失眠'];
-const MOODS = ['😊 正常','😔 低落','😤 烦躁','😴 嗜睡','🥰 愉快'];
+const SYMPTOMS = ['痛经','头痛','疲劳','情绪波动','腰酸','食欲变化','乳房胀痛','失眠','腹胀','水肿','恶心','腹泻','痘痘','注意力下降','畏寒','嗜甜'];
+const MOODS = ['😊 正常','😔 低落','😤 烦躁','😴 嗜睡','🥰 愉快','😰 焦虑','😭 哭泣倾向','🤯 压力大'];
+const FLOWS = ['无','微量','少量','中等','大量'];
+const EXERCISES = ['无','散步','瑜伽','跑步','游泳','力量训练','其他'];
 let calYear, calMonth, selectedDate = null, periodStart = null;
 
 function getPeriodData() {
@@ -92,8 +129,11 @@ function renderCalendar() {
     const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     let cls = 'cal-day';
     if (dateStr === todayStr) cls += ' today';
-    if (periodSet.has(dateStr)) cls += ' period';
-    else if (predSet.has(dateStr)) cls += ' predicted';
+    if (periodSet.has(dateStr)) {
+      cls += ' period';
+      const rec = data.symptoms[dateStr];
+      if (rec && rec.flow) cls += ' flow-' + FLOWS.indexOf(rec.flow);
+    } else if (predSet.has(dateStr)) cls += ' predicted';
     if (ovuSet.has(dateStr)) cls += ' ovulation';
     if (data.symptoms[dateStr]) cls += ' symptom-dot';
     if (periodStart === dateStr) cls += ' period-start';
@@ -225,14 +265,36 @@ function showSymptomPanel(dateStr, data) {
   const panel = document.getElementById('symptomPanel');
   panel.classList.add('show');
   document.getElementById('symDate').textContent = dateStr + ' 症状记录';
-  const record = data.symptoms[dateStr] || { symptoms: [], mood: '' };
+  const record = data.symptoms[dateStr] || { symptoms: [], mood: '', flow: '', energy: 0, cramps: 0, sleep: '', weight: '', exercise: '', exerciseMin: '', diet: '', notes: '' };
+  document.getElementById('flowTags').innerHTML = FLOWS.map(f =>
+    `<span class="sym-tag flow-${FLOWS.indexOf(f)} ${record.flow === f ? 'active' : ''}" onclick="toggleSingle(this)">${f}</span>`
+  ).join('');
   document.getElementById('symTags').innerHTML = SYMPTOMS.map(s =>
     `<span class="sym-tag ${record.symptoms.includes(s) ? 'active' : ''}" onclick="this.classList.toggle('active')">${s}</span>`
   ).join('');
   document.getElementById('moodTags').innerHTML = MOODS.map(m =>
-    `<span class="sym-tag mood ${record.mood === m ? 'active' : ''}" onclick="toggleMood(this,'${m}')">${m}</span>`
+    `<span class="sym-tag mood ${record.mood === m ? 'active' : ''}" onclick="toggleMood(this)">${m}</span>`
   ).join('');
+  document.getElementById('energyTags').innerHTML = [1,2,3,4,5].map(e =>
+    `<span class="sym-tag energy-${e} ${record.energy === e ? 'active' : ''}" onclick="toggleSingle(this)">${e === 1 ? '1 极度疲惫' : e === 2 ? '2 疲惫' : e === 3 ? '3 一般' : e === 4 ? '4 较好' : '5 充沛'}</span>`
+  ).join('');
+  document.getElementById('crampsTags').innerHTML = [0,1,2,3,4,5].map(c =>
+    `<span class="sym-tag cramps-${c} ${record.cramps === c ? 'active' : ''}" onclick="toggleSingle(this)">${c === 0 ? '0 无痛' : c <= 2 ? c + ' 轻微' : c <= 3 ? c + ' 中度' : c + ' 剧烈'}</span>`
+  ).join('');
+  document.getElementById('exerciseTags').innerHTML = EXERCISES.map(ex =>
+    `<span class="sym-tag ${record.exercise === ex ? 'active' : ''}" onclick="toggleSingle(this)">${ex}</span>`
+  ).join('');
+  document.getElementById('sleepInput').value = record.sleep || '';
+  document.getElementById('weightInput').value = record.weight || '';
+  document.getElementById('exerciseMinInput').value = record.exerciseMin || '';
+  document.getElementById('dietInput').value = record.diet || '';
+  document.getElementById('notesInput').value = record.notes || '';
   panel._dateStr = dateStr;
+}
+
+function toggleSingle(el) {
+  el.parentElement.querySelectorAll('.sym-tag').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
 }
 
 function toggleMood(el) {
@@ -248,8 +310,25 @@ function saveSymptom() {
   document.getElementById('symTags').querySelectorAll('.sym-tag.active').forEach(t => symptoms.push(t.textContent));
   const moodEl = document.getElementById('moodTags').querySelector('.sym-tag.active');
   const mood = moodEl ? moodEl.textContent : '';
-  if (symptoms.length || mood) data.symptoms[dateStr] = { symptoms, mood };
-  else delete data.symptoms[dateStr];
+  const flowEl = document.getElementById('flowTags').querySelector('.sym-tag.active');
+  const flow = flowEl ? flowEl.textContent : '';
+  const energyEl = document.getElementById('energyTags').querySelector('.sym-tag.active');
+  const energy = energyEl ? parseInt(energyEl.textContent) : 0;
+  const crampsEl = document.getElementById('crampsTags').querySelector('.sym-tag.active');
+  const cramps = crampsEl ? parseInt(crampsEl.textContent) : 0;
+  const sleep = document.getElementById('sleepInput').value;
+  const weight = document.getElementById('weightInput').value;
+  const exerciseEl = document.getElementById('exerciseTags').querySelector('.sym-tag.active');
+  const exercise = exerciseEl ? exerciseEl.textContent : '';
+  const exerciseMin = document.getElementById('exerciseMinInput').value;
+  const diet = document.getElementById('dietInput').value.trim();
+  const notes = document.getElementById('notesInput').value.trim();
+  const hasData = symptoms.length || mood || flow || energy || cramps || sleep || weight || exercise || diet || notes;
+  if (hasData) {
+    data.symptoms[dateStr] = { symptoms, mood, flow, energy, cramps, sleep, weight, exercise, exerciseMin, diet, notes };
+  } else {
+    delete data.symptoms[dateStr];
+  }
   savePeriodData(data);
   renderCalendar();
   panel.classList.remove('show');

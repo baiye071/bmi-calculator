@@ -57,11 +57,12 @@ const SYSTEM_PROMPT = `你是一位专业的健康管理师和营养师，具备
    - ## 🍎 营养方案（个性化饮食计划，包含具体食物推荐）
    - ## 🏃 运动处方（具体运动类型、频率、强度建议）
    - ## ⚠️ 风险提示（潜在健康风险和预防建议）
-   - 如果有月经数据，增加 ## 🌸 月经周期分析
+   - 如果有月经数据，增加 ## 🌸 月经周期分析（包含经量、精力、痛经、睡眠趋势、症状统计、情绪分布的详细分析）
 4. 语言专业但通俗易懂，像一位耐心的医生在给患者解释
 5. 给出具体可执行的建议，不要泛泛而谈
 6. 如果数据有异常，温和地指出并给出改善方案
-7. 在报告末尾加一段免责声明`;
+7. 如果有经期详细记录，分析症状与月经周期阶段的关联性，给出各阶段的针对性建议
+8. 在报告末尾加一段免责声明`;
 
 function getData() {
   const history = (() => { try { return JSON.parse(localStorage.getItem('bmi_history') || '[]'); } catch { return []; } })();
@@ -174,13 +175,63 @@ function buildPrompt(data) {
       prompt += `- 经期次数不足 2 次，无法计算周期\n`;
     }
 
-    // Symptoms
+    // Symptoms - detailed records
     const symptomEntries = Object.entries(data.period.symptoms || {});
     if (symptomEntries.length) {
-      prompt += `\n### 症状记录\n`;
-      symptomEntries.forEach(([date, s]) => {
-        prompt += `- ${date}：${s.symptoms.join('、') || '无症状'}，心情：${s.mood || '未记录'}\n`;
+      const periodSet = new Set(data.period.periods);
+      prompt += `\n### 详细每日记录\n`;
+      symptomEntries.sort((a,b) => a[0].localeCompare(b[0])).forEach(([date, s]) => {
+        const isPeriod = periodSet.has(date);
+        prompt += `- **${date}**${isPeriod ? '（经期）' : ''}：`;
+        const parts = [];
+        if (s.flow && s.flow !== '无') parts.push('经量:' + s.flow);
+        if (s.energy) parts.push('精力:' + s.energy + '/5');
+        if (s.cramps) parts.push('痛经:' + s.cramps + '/5');
+        if (s.sleep) parts.push('睡眠:' + s.sleep + 'h');
+        if (s.weight) parts.push('体重:' + s.weight + 'kg');
+        if (s.exercise && s.exercise !== '无') parts.push('运动:' + s.exercise + (s.exerciseMin ? s.exerciseMin + 'min' : ''));
+        if (s.symptoms.length) parts.push('症状:' + s.symptoms.join(','));
+        if (s.mood) parts.push('心情:' + s.mood);
+        if (s.diet) parts.push('饮食:' + s.diet);
+        if (s.notes) parts.push('备注:' + s.notes);
+        prompt += (parts.length ? parts.join(' | ') : '无记录') + '\n';
       });
+
+      // Statistical summary
+      prompt += `\n### 经期症状统计分析\n`;
+      const allSymptoms = {};
+      const allMoods = {};
+      let energySum = 0, energyCnt = 0, crampsSum = 0, crampsCnt = 0, sleepSum = 0, sleepCnt = 0;
+      const periodSymptoms = [], nonPeriodSymptoms = [];
+      symptomEntries.forEach(([date, s]) => {
+        const isPeriod = periodSet.has(date);
+        (s.symptoms || []).forEach(sym => {
+          allSymptoms[sym] = (allSymptoms[sym] || 0) + 1;
+          (isPeriod ? periodSymptoms : nonPeriodSymptoms).push(sym);
+        });
+        if (s.mood) allMoods[s.mood] = (allMoods[s.mood] || 0) + 1;
+        if (s.energy) { energySum += s.energy; energyCnt++; }
+        if (s.cramps !== undefined && s.cramps > 0) { crampsSum += s.cramps; crampsCnt++; }
+        if (s.sleep) { sleepSum += parseFloat(s.sleep); sleepCnt++; }
+      });
+      const sortedSymptoms = Object.entries(allSymptoms).sort((a,b) => b[1] - a[1]);
+      if (sortedSymptoms.length) {
+        prompt += `- 最常见症状 TOP5：${sortedSymptoms.slice(0,5).map(([s,c]) => s+'('+c+'次)').join('、')}\n`;
+      }
+      const sortedMoods = Object.entries(allMoods).sort((a,b) => b[1] - a[1]);
+      if (sortedMoods.length) {
+        const totalMood = Object.values(allMoods).reduce((a,b) => a+b, 0);
+        prompt += `- 情绪分布：${sortedMoods.map(([m,c]) => m+' '+Math.round(c/totalMood*100)+'%').join('、')}\n`;
+      }
+      if (energyCnt) prompt += `- 平均精力水平：${(energySum/energyCnt).toFixed(1)}/5\n`;
+      if (crampsCnt) prompt += `- 平均痛经程度：${(crampsSum/crampsCnt).toFixed(1)}/5\n`;
+      if (sleepCnt) prompt += `- 平均睡眠时长：${(sleepSum/sleepCnt).toFixed(1)} 小时\n`;
+      if (periodSymptoms.length) {
+        const ps = {};
+        periodSymptoms.forEach(s => ps[s] = (ps[s]||0)+1);
+        const topPeriod = Object.entries(ps).sort((a,b) => b[1]-a[1]).slice(0,3);
+        prompt += `- 经期最常见症状：${topPeriod.map(([s,c]) => s+'('+c+'次)').join('、')}\n`;
+      }
     }
   }
 

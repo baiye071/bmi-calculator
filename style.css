@@ -112,6 +112,33 @@ input[type=number]:focus,select:focus{border-color:#667eea}
 .sym-tag.active{background:#667eea;color:#fff;border-color:#667eea}
 .sym-tag.mood{font-size:1em;padding:4px 10px}
 .sym-save-btn{width:100%;padding:10px;border:none;border-radius:10px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-size:.85em;font-weight:600;cursor:pointer;margin-top:8px;transition:all .15s}
+.symptom-row{display:flex;gap:10px}
+.symptom-row .symptom-section{margin-bottom:0}
+.symptom-row input{width:100%;padding:8px 10px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:.82em;outline:none}
+.symptom-row input:focus{border-color:#667eea}
+/* Flow tag colors */
+.sym-tag.flow-1{border-color:#f8bbd0;color:#c2185b}.sym-tag.flow-1.active{background:#fce4ec;color:#c2185b;border-color:#f48fb1}
+.sym-tag.flow-2{border-color:#f48fb1;color:#ad1457}.sym-tag.flow-2.active{background:#f8bbd0;color:#ad1457;border-color:#ec407a}
+.sym-tag.flow-3{border-color:#ec407a;color:#880e4f}.sym-tag.flow-3.active{background:#f06292;color:#fff;border-color:#ec407a}
+.sym-tag.flow-4{border-color:#c2185b;color:#fff}.sym-tag.flow-4.active{background:#c2185b;color:#fff;border-color:#c2185b}
+/* Energy tag colors */
+.sym-tag.energy-1.active{background:#ef5350;color:#fff;border-color:#ef5350}
+.sym-tag.energy-2.active{background:#ff9800;color:#fff;border-color:#ff9800}
+.sym-tag.energy-3.active{background:#fdd835;color:#333;border-color:#fdd835}
+.sym-tag.energy-4.active{background:#66bb6a;color:#fff;border-color:#66bb6a}
+.sym-tag.energy-5.active{background:#43a047;color:#fff;border-color:#43a047}
+/* Cramps tag colors */
+.sym-tag.cramps-0.active{background:#e8f5e9;color:#2e7d32;border-color:#a5d6a7}
+.sym-tag.cramps-1.active{background:#fff9c4;color:#f57f17;border-color:#fff176}
+.sym-tag.cramps-2.active{background:#ffe0b2;color:#e65100;border-color:#ffcc80}
+.sym-tag.cramps-3.active{background:#ffcc80;color:#bf360c;border-color:#ffb74d}
+.sym-tag.cramps-4.active{background:#ff8a65;color:#bf360c;border-color:#ff7043}
+.sym-tag.cramps-5.active{background:#ef5350;color:#fff;border-color:#ef5350}
+/* Calendar flow intensity */
+.cal-day.flow-1{background:#fce4ec}
+.cal-day.flow-2{background:#f8bbd0}
+.cal-day.flow-3{background:#f48fb1;color:#880e4f}
+.cal-day.flow-4{background:#ec407a;color:#fff}
 .sym-save-btn:hover{transform:translateY(-1px);box-shadow:0 4px 15px rgba(102,126,234,.3)}
 /* Stats card */
 .stats-row{display:flex;gap:8px;margin-top:16px;margin-bottom:12px}
