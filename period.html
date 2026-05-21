@@ -30,6 +30,13 @@
   <div id="calHint" style="text-align:center;font-size:.72em;color:#e91e63;margin-bottom:8px;min-height:16px"></div>
   <div class="cal-grid" id="calGrid"></div>
   <div class="stats-row" id="calStats"></div>
+  <div id="calLegend" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;font-size:.68em;color:#888;margin-bottom:12px">
+    <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#e91e63;vertical-align:middle;margin-right:3px"></span>经期</span>
+    <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#f48fb1;opacity:.5;vertical-align:middle;margin-right:3px;border:1.5px dashed #f48fb1"></span>预测经期</span>
+    <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#e3f2fd;vertical-align:middle;margin-right:3px"></span>排卵期</span>
+    <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#fff3e0;vertical-align:middle;margin-right:3px"></span>危险期</span>
+    <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#e8f5e9;vertical-align:middle;margin-right:3px"></span>安全期</span>
+  </div>
   <div id="phaseAdvice"></div>
   <div class="symptom-panel" id="symptomPanel">
     <div class="symptom-date" id="symDate"></div>
@@ -122,6 +129,8 @@ function renderCalendar() {
   const predictions = getPredictions(data);
   const predSet = new Set(predictions.predicted);
   const ovuSet = new Set(predictions.ovulation);
+  const safeSet = new Set(predictions.safe);
+  const dangerSet = new Set(predictions.danger);
 
   let html = '';
   for (let i = 0; i < startDay; i++) html += '<div class="cal-day empty"></div>';
@@ -133,7 +142,13 @@ function renderCalendar() {
       cls += ' period';
       const rec = data.symptoms[dateStr];
       if (rec && rec.flow) cls += ' flow-' + FLOWS.indexOf(rec.flow);
-    } else if (predSet.has(dateStr)) cls += ' predicted';
+    } else if (predSet.has(dateStr)) {
+      cls += ' predicted';
+    } else if (dangerSet.has(dateStr)) {
+      cls += ' danger';
+    } else if (safeSet.has(dateStr)) {
+      cls += ' safe';
+    }
     if (ovuSet.has(dateStr)) cls += ' ovulation';
     if (data.symptoms[dateStr]) cls += ' symptom-dot';
     if (periodStart === dateStr) cls += ' period-start';
@@ -142,14 +157,17 @@ function renderCalendar() {
   document.getElementById('calGrid').innerHTML = html;
 
   const stats = getStats(data);
+  const cycle = stats.avgCycle || 30;
+  const preDays = Math.round(7 * cycle / 30);
+  const postDays = Math.round(8 * cycle / 30);
   const nextPeriod = predictions.nextPeriod;
   const daysUntil = nextPeriod ? Math.ceil((new Date(nextPeriod) - today) / 86400000) : null;
   const monthPrefix = `${calYear}-${String(calMonth+1).padStart(2,'0')}`;
   const monthDays = data.periods.filter(d => d.startsWith(monthPrefix)).length;
   document.getElementById('calStats').innerHTML = `
-    <div class="stats-card"><div class="val">${stats.avgCycle || '--'}</div><div class="lbl">平均周期（天）</div></div>
+    <div class="stats-card"><div class="val">${cycle}</div><div class="lbl">平均周期（天）</div></div>
     <div class="stats-card"><div class="val">${stats.avgDuration || '--'}</div><div class="lbl">平均经期（天）</div></div>
-    <div class="stats-card"><div class="val">${monthDays}</div><div class="lbl">本月经期（天）</div></div>
+    <div class="stats-card"><div class="val">${preDays}+${postDays}</div><div class="lbl">安全期（前+后）</div></div>
     <div class="stats-card"><div class="val">${daysUntil !== null && daysUntil >= 0 ? daysUntil + '天' : '--'}</div><div class="lbl">距下次经期</div></div>
   `;
 
@@ -226,36 +244,71 @@ function getStats(data) {
 function getPredictions(data) {
   const groups = getPeriodGroups(data);
   const stats = getStats(data);
-  const result = { predicted: [], ovulation: [], nextPeriod: null };
-  if (!groups.length || !stats.avgCycle) return result;
+  const result = { predicted: [], ovulation: [], nextPeriod: null, safe: [], danger: [] };
+  if (!groups.length) return result;
 
+  const cycle = stats.avgCycle || 30;
+  const duration = stats.avgDuration || 5;
   const today = new Date();
   today.setHours(0,0,0,0);
   const lastStart = new Date(groups[groups.length - 1][0]);
+  const lastEnd = new Date(groups[groups.length - 1][groups[groups.length - 1].length - 1]);
 
   // Find the next future period
   let nextStart = new Date(lastStart);
   while (nextStart <= today) {
-    nextStart.setDate(nextStart.getDate() + stats.avgCycle);
+    nextStart.setDate(nextStart.getDate() + cycle);
   }
   result.nextPeriod = fmt(nextStart);
 
   // Predict next 3 future periods
   for (let p = 0; p < 3; p++) {
     const pStart = new Date(lastStart);
-    pStart.setDate(pStart.getDate() + stats.avgCycle * (p + 1));
+    pStart.setDate(pStart.getDate() + cycle * (p + 1));
     if (pStart <= today) continue;
-    for (let d = 0; d < (stats.avgDuration || 5); d++) {
+    const pEnd = new Date(pStart);
+    pEnd.setDate(pEnd.getDate() + duration - 1);
+
+    for (let d = 0; d < duration; d++) {
       const dd = new Date(pStart);
       dd.setDate(dd.getDate() + d);
       if (dd > today) result.predicted.push(fmt(dd));
     }
+
+    // Ovulation: ~14 days before next period
     const ovu = new Date(pStart);
     ovu.setDate(ovu.getDate() - 14);
     for (let d = -1; d <= 1; d++) {
       const od = new Date(ovu);
       od.setDate(od.getDate() + d);
       if (od > today) result.ovulation.push(fmt(od));
+    }
+
+    // Safe period: 前7后8 (proportional to cycle length)
+    const preDays = Math.round(7 * cycle / 30);
+    const postDays = Math.round(8 * cycle / 30);
+
+    // Pre-period safe: 7 days before period start
+    for (let d = 1; d <= preDays; d++) {
+      const sd = new Date(pStart);
+      sd.setDate(sd.getDate() - d);
+      if (sd > today) result.safe.push(fmt(sd));
+    }
+    // Post-period safe: 8 days after period end
+    for (let d = 1; d <= postDays; d++) {
+      const sd = new Date(pEnd);
+      sd.setDate(sd.getDate() + d);
+      if (sd > today) result.safe.push(fmt(sd));
+    }
+    // Danger: between post-safe end and pre-safe start (ovulation window)
+    const dangerStart = new Date(pEnd);
+    dangerStart.setDate(dangerStart.getDate() + postDays + 1);
+    const dangerEnd = new Date(pStart);
+    dangerEnd.setDate(dangerEnd.getDate() - preDays - 1);
+    const dd = new Date(dangerStart);
+    while (dd <= dangerEnd) {
+      if (dd > today) result.danger.push(fmt(dd));
+      dd.setDate(dd.getDate() + 1);
     }
   }
   return result;
