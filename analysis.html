@@ -464,10 +464,12 @@ function downloadReport() {
 (async () => {
   await initSupabase();
   const session = await getSession();
-  if (session) {
-    document.getElementById('userMenu').style.display = 'flex';
-    document.getElementById('userEmail').textContent = session.user.email;
+  if (!session) {
+    window.location.href = 'login.html';
+    return;
   }
+  document.getElementById('userMenu').style.display = 'flex';
+  document.getElementById('userEmail').textContent = session.user.email;
   document.getElementById('apiKeyInput').value = await getApiKey();
   renderSummary(await getData());
 })();
