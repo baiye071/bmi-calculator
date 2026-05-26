@@ -42,3 +42,11 @@ async function requireAuth() {
   }
   return session;
 }
+
+function onSessionChange(callback) {
+  window._supabase.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+      callback(session, event);
+    }
+  });
+}

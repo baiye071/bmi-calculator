@@ -115,19 +115,22 @@ async function saveSymptom(dateStr, symptomData) {
 
 // ============ Settings (API Key) ============
 
+let _cachedApiKey = '';
+
 async function getApiKey() {
+  if (_cachedApiKey) return _cachedApiKey;
   try {
     const { apiKey } = await apiFetch('settings');
     if (apiKey) {
-      localStorage.setItem('mimo_api_key', apiKey);
+      _cachedApiKey = apiKey;
       return apiKey;
     }
   } catch {}
-  return localStorage.getItem('mimo_api_key') || '';
+  return '';
 }
 
 async function setApiKey(key) {
-  localStorage.setItem('mimo_api_key', key);
+  _cachedApiKey = key;
   try {
     await apiFetch('settings', {
       method: 'PUT',
@@ -141,4 +144,30 @@ async function setApiKey(key) {
 async function getAllData() {
   const [history, period] = await Promise.all([getHistory(), getPeriodData()]);
   return { history, period };
+}
+
+// ============ Privacy: Export & Delete ============
+
+async function exportAllData() {
+  const [history, period] = await Promise.all([getHistory(), getPeriodData()]);
+  const exportObj = {
+    exportDate: new Date().toISOString(),
+    bmiHistory: history,
+    periodData: period,
+  };
+  const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `health_data_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function deleteAllServerData() {
+  try { await apiFetch('bmi?all=true', { method: 'DELETE' }); } catch {}
+  try { await apiFetch('period', { method: 'DELETE' }); } catch {}
+  localStorage.removeItem('bmi_history');
+  localStorage.removeItem('period_data');
+  _cachedApiKey = '';
 }

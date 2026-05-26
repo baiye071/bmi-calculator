@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>健康助手 - 隐私说明</title>
+<link rel="stylesheet" href="style.css">
+<script src="js/supabase-client.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/api.js"></script>
+<script src="js/sync.js"></script>
+</head>
+<body>
+<nav>
+  <a href="index.html" class="logo">健康助手</a>
+  <div class="nav-links">
+    <a href="index.html">身体数据</a>
+    <a href="period.html">经期日历</a>
+    <a href="history.html">历史记录</a>
+    <a href="analysis.html">AI 分析</a>
+  </div>
+  <div class="user-menu" id="userMenu" style="display:none">
+    <span id="userEmail" style="font-size:.75em;color:#888"></span>
+    <button class="btn-sm" onclick="signOut()">退出</button>
+  </div>
+</nav>
+
+<div class="card">
+  <h1>隐私说明</h1>
+  <p class="subtitle">你的健康数据，你做主</p>
+
+  <div class="privacy-card">
+    <h2>数据存储</h2>
+    <ul>
+      <li>你的健康数据（BMI 记录、月经周期、症状等）存储在 Supabase 云端数据库中，采用加密传输（HTTPS）。</li>
+      <li>数据同步采用离线优先策略：本地缓存 + 云端同步，确保断网时也能正常使用。</li>
+      <li>API 密钥仅在内存中临时保存，不会持久化到浏览器本地存储。</li>
+    </ul>
+
+    <h2>数据安全</h2>
+    <ul>
+      <li>所有 API 请求均通过 JWT 令牌认证，确保只有你本人能访问自己的数据。</li>
+      <li>服务端通过 user_id 隔离数据，不同用户之间完全隔离。</li>
+      <li>我们不会将你的健康数据分享给任何第三方。</li>
+    </ul>
+
+    <h2>你的权利</h2>
+    <ul>
+      <li><b>导出数据</b>：你可以在"历史记录"页面导出所有数据（CSV 或 JSON 格式）。</li>
+      <li><b>删除数据</b>：你可以在"历史记录"页面清空所有记录，或联系管理员删除服务端数据。</li>
+      <li><b>注销账号</b>：如需完全删除账号及所有数据，请联系我们。</li>
+    </ul>
+
+    <h2>免责声明</h2>
+    <ul>
+      <li>本应用提供的健康分析、周期预测和饮食建议仅供参考，不构成医学诊断或治疗建议。</li>
+      <li>易孕窗口和排卵预测基于统计估算，不能作为避孕或备孕的依据。</li>
+      <li>如有健康问题，请咨询专业医疗机构。</li>
+    </ul>
+
+    <h2>数据管理</h2>
+    <div id="dataActions" style="margin-top:12px">
+      <div class="btn-row">
+        <button class="btn-sm" onclick="exportAllData()">导出全部数据 (JSON)</button>
+        <button class="btn-sm danger" onclick="deleteAll()">删除所有数据</button>
+      </div>
+      <p style="font-size:.72em;color:#aaa;margin-top:8px">删除操作不可恢复，请先导出备份。</p>
+    </div>
+  </div>
+</div>
+
+<script>
+async function deleteAll() {
+  if (!confirm('确定要删除所有健康数据吗？此操作不可恢复。')) return;
+  if (!confirm('再次确认：删除后数据将无法恢复，确定继续？')) return;
+  await deleteAllServerData();
+  alert('所有数据已删除');
+  window.location.href = 'index.html';
+}
+
+(async () => {
+  await initSupabase();
+  const session = await getSession();
+  if (session) {
+    document.getElementById('userMenu').style.display = 'flex';
+    document.getElementById('userEmail').textContent = session.user.email;
+  }
+})();
+</script>
+</body>
+</html>

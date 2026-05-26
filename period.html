@@ -9,6 +9,7 @@
 <script src="js/auth.js"></script>
 <script src="js/api.js"></script>
 <script src="js/sync.js"></script>
+<script src="js/alerts.js"></script>
 </head>
 <body>
 <nav>
@@ -18,6 +19,7 @@
     <a href="period.html" class="active">经期日历</a>
     <a href="history.html">历史记录</a>
     <a href="analysis.html">AI 分析</a>
+    <a href="privacy.html">隐私</a>
   </div>
   <div class="user-menu" id="userMenu" style="display:none">
     <span id="userEmail" style="font-size:.75em;color:#888"></span>
@@ -38,62 +40,98 @@
   <div id="calHint" style="text-align:center;font-size:.72em;color:#e91e63;margin-bottom:8px;min-height:16px"></div>
   <div class="cal-grid" id="calGrid"></div>
   <div class="stats-row" id="calStats"></div>
+  <div id="alertsSection"></div>
   <div class="action-panel" id="actionPanel"></div>
   <div id="calLegend" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;font-size:.68em;color:#888;margin-bottom:12px">
-    <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#e91e63;vertical-align:middle;margin-right:3px"></span>经期</span>
-    <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#f48fb1;opacity:.5;vertical-align:middle;margin-right:3px;border:1.5px dashed #f48fb1"></span>预测经期</span>
-    <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#e3f2fd;vertical-align:middle;margin-right:3px"></span>排卵期</span>
-    <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#fff3e0;vertical-align:middle;margin-right:3px"></span>危险期</span>
-    <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#e8f5e9;vertical-align:middle;margin-right:3px"></span>安全期</span>
+    <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#e91e63;vertical-align:middle;margin-right:3px"></span>月经期</span>
+    <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#f48fb1;opacity:.5;vertical-align:middle;margin-right:3px;border:1.5px dashed #f48fb1"></span>预测月经</span>
+    <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#e3f2fd;vertical-align:middle;margin-right:3px"></span>预测排卵窗口</span>
+    <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#fff3e0;vertical-align:middle;margin-right:3px"></span>易孕窗口</span>
+    <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#e8f5e9;vertical-align:middle;margin-right:3px"></span>低易孕概率期</span>
   </div>
   <div id="phaseAdvice"></div>
   <div class="symptom-panel" id="symptomPanel">
     <div class="symptom-date" id="symDate"></div>
-    <div class="symptom-section">
-      <div class="lbl">经量</div>
-      <div class="symptom-tags" id="flowTags"></div>
-    </div>
-    <div class="symptom-section">
-      <div class="lbl">症状（可多选）</div>
-      <div class="symptom-tags" id="symTags"></div>
-    </div>
-    <div class="symptom-section">
-      <div class="lbl">心情</div>
-      <div class="symptom-tags" id="moodTags"></div>
-    </div>
-    <div class="symptom-section">
-      <div class="lbl">精力等级</div>
-      <div class="symptom-tags" id="energyTags"></div>
-    </div>
-    <div class="symptom-section">
-      <div class="lbl">痛经程度</div>
-      <div class="symptom-tags" id="crampsTags"></div>
-    </div>
-    <div class="symptom-row">
-      <div class="symptom-section" style="flex:1">
-        <div class="lbl">睡眠（小时）</div>
-        <input type="number" id="sleepInput" min="0" max="24" step="0.5" placeholder="如 7.5" style="width:100%;padding:8px 10px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:.82em;outline:none">
+    <!-- Quick check-in -->
+    <div id="quickSection">
+      <div class="symptom-section">
+        <div class="lbl">经量</div>
+        <div class="symptom-tags" id="quickFlowTags"></div>
       </div>
-      <div class="symptom-section" style="flex:1">
-        <div class="lbl">体重（kg）</div>
-        <input type="number" id="weightInput" min="20" max="300" step="0.1" placeholder="可选" style="width:100%;padding:8px 10px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:.82em;outline:none">
+      <div class="symptom-section">
+        <div class="lbl">痛经程度</div>
+        <div class="symptom-tags" id="quickCrampsTags"></div>
       </div>
+      <div class="symptom-section">
+        <div class="lbl">心情</div>
+        <div class="symptom-tags" id="quickMoodTags"></div>
+      </div>
+      <div class="symptom-section">
+        <div class="lbl">睡眠质量</div>
+        <div class="symptom-tags" id="quickSleepTags"></div>
+      </div>
+      <div class="symptom-row">
+        <div class="symptom-section" style="flex:1">
+          <div class="lbl">睡眠（小时）</div>
+          <input type="number" id="quickSleepInput" min="0" max="24" step="0.5" placeholder="如 7.5" style="width:100%;padding:8px 10px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:.82em;outline:none">
+        </div>
+        <div class="symptom-section" style="flex:1">
+          <div class="lbl">体重（kg）</div>
+          <input type="number" id="quickWeightInput" min="20" max="300" step="0.1" placeholder="可选" style="width:100%;padding:8px 10px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:.82em;outline:none">
+        </div>
+      </div>
+      <button class="expand-btn" onclick="expandDetailed()">展开详细记录 &raquo;</button>
+      <button class="sym-save-btn" onclick="saveQuickSymptom()">保存</button>
     </div>
-    <div class="symptom-section">
-      <div class="lbl">运动</div>
-      <div class="symptom-tags" id="exerciseTags"></div>
-      <input type="number" id="exerciseMinInput" min="0" max="600" step="5" placeholder="时长（分钟）" style="width:100%;padding:8px 10px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:.82em;outline:none;margin-top:6px">
+    <!-- Detailed (hidden by default) -->
+    <div id="detailedSection" style="display:none">
+      <div class="symptom-section">
+        <div class="lbl">经量</div>
+        <div class="symptom-tags" id="flowTags"></div>
+      </div>
+      <div class="symptom-section">
+        <div class="lbl">症状（可多选）</div>
+        <div class="symptom-tags" id="symTags"></div>
+      </div>
+      <div class="symptom-section">
+        <div class="lbl">心情</div>
+        <div class="symptom-tags" id="moodTags"></div>
+      </div>
+      <div class="symptom-section">
+        <div class="lbl">精力等级</div>
+        <div class="symptom-tags" id="energyTags"></div>
+      </div>
+      <div class="symptom-section">
+        <div class="lbl">痛经程度</div>
+        <div class="symptom-tags" id="crampsTags"></div>
+      </div>
+      <div class="symptom-row">
+        <div class="symptom-section" style="flex:1">
+          <div class="lbl">睡眠（小时）</div>
+          <input type="number" id="sleepInput" min="0" max="24" step="0.5" placeholder="如 7.5" style="width:100%;padding:8px 10px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:.82em;outline:none">
+        </div>
+        <div class="symptom-section" style="flex:1">
+          <div class="lbl">体重（kg）</div>
+          <input type="number" id="weightInput" min="20" max="300" step="0.1" placeholder="可选" style="width:100%;padding:8px 10px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:.82em;outline:none">
+        </div>
+      </div>
+      <div class="symptom-section">
+        <div class="lbl">运动</div>
+        <div class="symptom-tags" id="exerciseTags"></div>
+        <input type="number" id="exerciseMinInput" min="0" max="600" step="5" placeholder="时长（分钟）" style="width:100%;padding:8px 10px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:.82em;outline:none;margin-top:6px">
+      </div>
+      <div class="symptom-section">
+        <div class="lbl">饮食备注</div>
+        <input type="text" id="dietInput" placeholder="如：红糖姜茶、冰淇淋..." style="width:100%;padding:8px 10px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:.82em;outline:none">
+      </div>
+      <div class="symptom-section">
+        <div class="lbl">每日备注</div>
+        <input type="text" id="notesInput" placeholder="其他想记录的..." style="width:100%;padding:8px 10px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:.82em;outline:none">
+      </div>
+      <button class="sym-save-btn" onclick="saveSymptom()">保存</button>
     </div>
-    <div class="symptom-section">
-      <div class="lbl">饮食备注</div>
-      <input type="text" id="dietInput" placeholder="如：红糖姜茶、冰淇淋..." style="width:100%;padding:8px 10px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:.82em;outline:none">
-    </div>
-    <div class="symptom-section">
-      <div class="lbl">每日备注</div>
-      <input type="text" id="notesInput" placeholder="其他想记录的..." style="width:100%;padding:8px 10px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:.82em;outline:none">
-    </div>
-    <button class="sym-save-btn" onclick="saveSymptom()">保存</button>
   </div>
+  <div class="disclaimer">本应用提供的易孕窗口和排卵预测基于统计估算，不构成医学避孕建议。如有避孕需求，请咨询专业医生。</div>
 </div>
 
 <script>
@@ -150,9 +188,9 @@ async function renderCalendar() {
     } else if (predSet.has(dateStr)) {
       cls += ' predicted';
     } else if (dangerSet.has(dateStr)) {
-      cls += ' danger';
+      cls += ' high-fertility';
     } else if (safeSet.has(dateStr)) {
-      cls += ' safe';
+      cls += ' low-fertility';
     }
     if (userOvuSet.has(dateStr) || ovuSet.has(dateStr)) cls += ' ovulation';
     if (data.symptoms[dateStr]) cls += ' symptom-dot';
@@ -171,19 +209,20 @@ async function renderCalendar() {
   const allDays = allPeriodDays(data);
   const monthDays = allDays.filter(d => d.startsWith(monthPrefix)).length;
   const confPercent = Math.round((stats.confidence || 0) * 100);
+  const range = predictions.nextPeriodRange;
   document.getElementById('calStats').innerHTML = `
     <div class="stats-card"><div class="val">${cycle}</div><div class="lbl">预测周期（天）</div></div>
-    <div class="stats-card"><div class="val">${stats.avgDuration || '--'}</div><div class="lbl">平均经期（天）</div></div>
-    <div class="stats-card"><div class="val">${preDays}+${postDays}</div><div class="lbl">安全期（前+后）</div></div>
-    <div class="stats-card"><div class="val">${daysUntil !== null && daysUntil >= 0 ? daysUntil + '天' : '--'}</div><div class="lbl">距下次经期</div></div>
+    <div class="stats-card"><div class="val">${stats.avgDuration || '--'}</div><div class="lbl">平均月经期（天）</div></div>
+    <div class="stats-card"><div class="val">${preDays}+${postDays}</div><div class="lbl">低易孕概率期（前+后）</div></div>
+    ${range ? `<div class="stats-card" style="flex:2"><div class="val" style="font-size:1em">${range.earliest} ~ ${range.latest}</div><div class="lbl">预计下次月经</div><div style="font-size:.7em;color:#888;margin-top:2px">最可能：${range.mostLikely} | 置信度：${range.confidenceLevel}</div></div>` : `<div class="stats-card"><div class="val">${daysUntil !== null && daysUntil >= 0 ? daysUntil + '天' : '--'}</div><div class="lbl">距下次月经</div></div>`}
   `;
-  if (data.ranges.length >= 2) {
+  if (range && range.basis) {
     const confBar = document.getElementById('calStats');
-    const confHtml = `<div style="text-align:center;margin-top:8px;font-size:.72em;color:#888">预测置信度：<span style="color:${confPercent > 60 ? '#22c55e' : confPercent > 30 ? '#f59e0b' : '#ef4444'};font-weight:700">${confPercent}%</span>（${data.ranges.length} 个周期数据，贝叶斯加权）</div>`;
-    confBar.insertAdjacentHTML('afterend', confHtml);
+    confBar.insertAdjacentHTML('afterend', `<div style="text-align:center;margin-top:8px;font-size:.68em;color:#aaa">${range.basis}</div>`);
   }
 
   renderPhaseAdvice(data, predictions, today);
+  renderAlerts(checkAbnormalities(data, stats), 'alertsSection');
 }
 
 function fmt(d) {
@@ -290,8 +329,9 @@ async function showPeriodActions(dateStr) {
     </div>
     <div style="display:flex;gap:10px;margin-top:8px">
       <button class="action-btn" style="flex:1;background:${isOvuDay ? '#e3f2fd' : '#f5f5f5'};color:${isOvuDay ? '#1976d2' : '#555'};border:${isOvuDay ? '1.5px solid #90caf9' : 'none'}" onclick="toggleOvulationDay()">${isOvuDay ? '取消排卵日' : '标记为排卵日'}</button>
-      ${isPeriodDay ? '<button class="action-btn" style="flex:1;background:#f5f5f5;color:#555" onclick="openSymptomFromAction()">记录症状</button>' : ''}
+      ${isPeriodDay ? '<button class="action-btn" style="flex:1;background:#f5f5f5;color:#555" onclick="openQuickSymptom()">快速打卡</button>' : ''}
     </div>
+    ${isPeriodDay ? '<button style="width:100%;margin-top:4px;padding:4px;border:none;background:none;color:#aaa;font-size:.72em;cursor:pointer" onclick="openSymptomFromAction()">展开详细记录</button>' : ''}
     <button style="width:100%;margin-top:8px;padding:6px;border:none;background:none;color:#999;font-size:.75em;cursor:pointer" onclick="hideActions()">取消</button>
   `;
   panel.classList.add('show');
@@ -309,6 +349,106 @@ async function openSymptomFromAction() {
   document.getElementById('actionPanel').classList.remove('show');
   const data = await getPeriodData();
   showSymptomPanel(dateStr, data);
+}
+
+async function openQuickSymptom() {
+  const dateStr = selectedDate;
+  document.getElementById('actionPanel').classList.remove('show');
+  const data = await getPeriodData();
+  showQuickSymptomPanel(dateStr, data);
+}
+
+const QUICK_MOODS = ['😊 好', '😐 一般', '😔 差'];
+const QUICK_SLEEP = ['😴 好', '😐 一般', '😫 差'];
+
+function showQuickSymptomPanel(dateStr, data) {
+  const panel = document.getElementById('symptomPanel');
+  panel.classList.add('show');
+  document.getElementById('quickSection').style.display = 'block';
+  document.getElementById('detailedSection').style.display = 'none';
+  document.getElementById('symDate').textContent = dateStr + ' 快速打卡';
+
+  const record = data.symptoms[dateStr] || {};
+
+  document.getElementById('quickFlowTags').innerHTML = FLOWS.map(f =>
+    `<span class="sym-tag flow-${FLOWS.indexOf(f)} ${record.flow === f ? 'active' : ''}" onclick="toggleSingle(this)">${f}</span>`
+  ).join('');
+
+  document.getElementById('quickCrampsTags').innerHTML = [0,1,2,3,4,5].map(c =>
+    `<span class="sym-tag cramps-${c} ${record.cramps === c ? 'active' : ''}" onclick="toggleSingle(this)">${c === 0 ? '无痛' : c <= 2 ? c + ' 轻微' : c <= 3 ? c + ' 中度' : c + ' 剧烈'}</span>`
+  ).join('');
+
+  document.getElementById('quickMoodTags').innerHTML = QUICK_MOODS.map(m =>
+    `<span class="sym-tag mood ${record.mood === m ? 'active' : ''}" onclick="toggleSingle(this)">${m}</span>`
+  ).join('');
+
+  document.getElementById('quickSleepTags').innerHTML = QUICK_SLEEP.map(s =>
+    `<span class="sym-tag ${record.sleepQuality === s ? 'active' : ''}" onclick="toggleSingle(this)">${s}</span>`
+  ).join('');
+
+  document.getElementById('quickSleepInput').value = record.sleep || '';
+  document.getElementById('quickWeightInput').value = record.weight || '';
+
+  panel._dateStr = dateStr;
+  panel._mode = 'quick';
+}
+
+function expandDetailed() {
+  document.getElementById('quickSection').style.display = 'none';
+  document.getElementById('detailedSection').style.display = 'block';
+  document.getElementById('symptomPanel')._mode = 'detailed';
+
+  const dateStr = document.getElementById('symptomPanel')._dateStr;
+  const quickFlow = document.getElementById('quickFlowTags').querySelector('.sym-tag.active');
+  const quickCramps = document.getElementById('quickCrampsTags').querySelector('.sym-tag.active');
+  const quickMood = document.getElementById('quickMoodTags').querySelector('.sym-tag.active');
+  const quickSleep = document.getElementById('quickSleepInput').value;
+  const quickWeight = document.getElementById('quickWeightInput').value;
+
+  if (quickFlow) {
+    const flowTags = document.getElementById('flowTags').querySelectorAll('.sym-tag');
+    flowTags.forEach(t => { if (t.textContent === quickFlow.textContent) t.classList.add('active'); });
+  }
+  if (quickCramps) {
+    const crampsTags = document.getElementById('crampsTags').querySelectorAll('.sym-tag');
+    crampsTags.forEach(t => { if (t.textContent === quickCramps.textContent) t.classList.add('active'); });
+  }
+  if (quickMood) {
+    const moodTags = document.getElementById('moodTags').querySelectorAll('.sym-tag');
+    moodTags.forEach(t => { if (t.textContent === quickMood.textContent) t.classList.add('active'); });
+  }
+  if (quickSleep) document.getElementById('sleepInput').value = quickSleep;
+  if (quickWeight) document.getElementById('weightInput').value = quickWeight;
+}
+
+async function saveQuickSymptom() {
+  const panel = document.getElementById('symptomPanel');
+  const dateStr = panel._dateStr;
+  const data = await getPeriodData();
+
+  const flowEl = document.getElementById('quickFlowTags').querySelector('.sym-tag.active');
+  const flow = flowEl ? flowEl.textContent : '';
+  const crampsEl = document.getElementById('quickCrampsTags').querySelector('.sym-tag.active');
+  const cramps = crampsEl ? parseInt(crampsEl.textContent) : 0;
+  const moodEl = document.getElementById('quickMoodTags').querySelector('.sym-tag.active');
+  const mood = moodEl ? moodEl.textContent : '';
+  const sleepQualityEl = document.getElementById('quickSleepTags').querySelector('.sym-tag.active');
+  const sleepQuality = sleepQualityEl ? sleepQualityEl.textContent : '';
+  const sleep = document.getElementById('quickSleepInput').value;
+  const weight = document.getElementById('quickWeightInput').value;
+
+  const hasData = flow || cramps || mood || sleepQuality || sleep || weight;
+  if (hasData) {
+    data.symptoms[dateStr] = {
+      symptoms: [], mood, flow, energy: 0, cramps, sleep, weight,
+      exercise: '', exerciseMin: '', diet: '', notes: '', sleepQuality
+    };
+  } else {
+    delete data.symptoms[dateStr];
+  }
+  await savePeriodData(data);
+  await renderCalendar();
+  panel.classList.remove('show');
 }
 
 async function toggleOvulationDay() {
@@ -387,10 +527,10 @@ async function doSetEnd() {
 
 function getStats(data) {
   const ranges = data.ranges.filter(r => r.start && r.end);
-  if (!ranges.length) return { avgCycle: null, avgDuration: null, confidence: 0 };
+  if (!ranges.length) return { avgCycle: null, avgDuration: null, confidence: 0, cycleStd: 3, durationStd: 1, confidenceLevel: '低', confidenceBasis: '' };
   if (ranges.length < 2) {
     const dur = Math.round((new Date(ranges[0].end) - new Date(ranges[0].start)) / 86400000) + 1;
-    return { avgCycle: null, avgDuration: dur, confidence: 0.1 };
+    return { avgCycle: null, avgDuration: dur, confidence: 0.1, cycleStd: 3, durationStd: 1, confidenceLevel: '低', confidenceBasis: '数据不足，使用默认值' };
   }
 
   const sorted = [...ranges].sort((a, b) => a.start.localeCompare(b.start));
@@ -401,10 +541,9 @@ function getStats(data) {
   }
   const durations = sorted.map(r => Math.round((new Date(r.end) - new Date(r.start)) / 86400000) + 1);
 
-  // Bayesian weighted average with exponential decay
   const priorCycle = 30, priorDuration = 5;
-  const priorWeight = 2; // prior counts as 2 observations
-  const decay = 0.7; // recent cycles weighted 0.7^(distance)
+  const priorWeight = 2;
+  const decay = 0.7;
 
   const bayesianWeighted = (values, prior) => {
     if (!values.length) return prior;
@@ -418,34 +557,65 @@ function getStats(data) {
     return Math.round(weightedSum / totalWeight);
   };
 
+  const bayesianWeightedStd = (values, mean) => {
+    if (values.length < 2) return 3;
+    let weightedSumSq = 0, totalWeight = 0;
+    for (let i = 0; i < values.length; i++) {
+      const w = Math.pow(decay, values.length - 1 - i);
+      weightedSumSq += Math.pow(values[i] - mean, 2) * w;
+      totalWeight += w;
+    }
+    return Math.sqrt(weightedSumSq / totalWeight);
+  };
+
+  const avgCycle = cycles.length ? bayesianWeighted(cycles, priorCycle) : null;
+  const cycleStd = cycles.length ? Math.round(bayesianWeightedStd(cycles, avgCycle) * 10) / 10 : 3;
+  const avgDuration = bayesianWeighted(durations, priorDuration);
+  const durationStd = durations.length >= 2 ? Math.round(bayesianWeightedStd(durations, avgDuration) * 10) / 10 : 1;
+
   const confidence = Math.min(1, (cycles.length * 0.15 + 0.1));
+  let confidenceLevel = '低';
+  if (cycles.length >= 6 && cycleStd <= 3) confidenceLevel = '高';
+  else if (cycles.length >= 3) confidenceLevel = '中';
 
   return {
-    avgCycle: cycles.length ? bayesianWeighted(cycles, priorCycle) : null,
-    avgDuration: bayesianWeighted(durations, priorDuration),
-    confidence,
-    rawCycles: cycles,
-    rawDurations: durations
+    avgCycle, avgDuration, confidence,
+    cycleStd, durationStd, confidenceLevel,
+    confidenceBasis: cycles.length ? `最近${cycles.length}次周期，平均${avgCycle}天，波动±${Math.round(cycleStd)}天` : '',
+    rawCycles: cycles, rawDurations: durations
   };
 }
 
 function getPredictions(data) {
   const stats = getStats(data);
-  const result = { predicted: [], ovulation: [], nextPeriod: null, safe: [], danger: [] };
+  const result = { predicted: [], ovulation: [], nextPeriod: null, nextPeriodRange: null, safe: [], danger: [] };
   const last = latestRange(data);
   if (!last || !last.end) return result;
 
   const cycle = stats.avgCycle || 30;
   const duration = stats.avgDuration || 5;
+  const std = stats.cycleStd || 3;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const lastStart = new Date(last.start);
   const lastEnd = new Date(last.end);
 
-  // Next period
+  // Next period with range
   let nextStart = new Date(lastStart);
   while (nextStart <= today) nextStart.setDate(nextStart.getDate() + cycle);
   result.nextPeriod = fmt(nextStart);
+
+  const rangeStart = new Date(nextStart);
+  rangeStart.setDate(rangeStart.getDate() - Math.round(std * 1.5));
+  const rangeEnd = new Date(nextStart);
+  rangeEnd.setDate(rangeEnd.getDate() + Math.round(std * 1.5));
+  result.nextPeriodRange = {
+    earliest: fmt(rangeStart),
+    latest: fmt(rangeEnd),
+    mostLikely: fmt(nextStart),
+    confidenceLevel: stats.confidenceLevel,
+    basis: stats.confidenceBasis
+  };
 
   // Predict 3 future periods
   for (let p = 0; p < 3; p++) {
@@ -470,7 +640,7 @@ function getPredictions(data) {
       if (od > today) result.ovulation.push(fmt(od));
     }
 
-    // Safe: 前7后8 (proportional)
+    // Low fertility: 前7后8 (proportional)
     const preDays = Math.round(7 * cycle / 30);
     const postDays = Math.round(8 * cycle / 30);
     for (let d = 1; d <= preDays; d++) {
@@ -500,7 +670,9 @@ function getPredictions(data) {
 function showSymptomPanel(dateStr, data) {
   const panel = document.getElementById('symptomPanel');
   panel.classList.add('show');
-  document.getElementById('symDate').textContent = dateStr + ' 症状记录';
+  document.getElementById('quickSection').style.display = 'none';
+  document.getElementById('detailedSection').style.display = 'block';
+  document.getElementById('symDate').textContent = dateStr + ' 详细记录';
   const record = data.symptoms[dateStr] || { symptoms: [], mood: '', flow: '', energy: 0, cramps: 0, sleep: '', weight: '', exercise: '', exerciseMin: '', diet: '', notes: '' };
   document.getElementById('flowTags').innerHTML = FLOWS.map(f =>
     `<span class="sym-tag flow-${FLOWS.indexOf(f)} ${record.flow === f ? 'active' : ''}" onclick="toggleSingle(this)">${f}</span>`
@@ -526,6 +698,7 @@ function showSymptomPanel(dateStr, data) {
   document.getElementById('dietInput').value = record.diet || '';
   document.getElementById('notesInput').value = record.notes || '';
   panel._dateStr = dateStr;
+  panel._mode = 'detailed';
 }
 
 function toggleSingle(el) {
@@ -574,7 +747,7 @@ function renderPhaseAdvice(data, predictions, today) {
   const container = document.getElementById('phaseAdvice');
   const last = latestRange(data);
   if (!last || !last.end || !predictions.nextPeriod) {
-    container.innerHTML = '<div style="text-align:center;color:#bbb;font-size:.82em;padding:16px">标记经期开始和结束后显示阶段建议</div>';
+    container.innerHTML = '<div style="text-align:center;color:#bbb;font-size:.82em;padding:16px">标记月经开始和结束后显示阶段建议</div>';
     return;
   }
   const stats = getStats(data);
@@ -584,13 +757,13 @@ function renderPhaseAdvice(data, predictions, today) {
 
   let cls, icon, title, advice;
   if (dayInCycle <= (stats.avgDuration || 5)) {
-    cls = 'phase-period'; icon = '🩸'; title = '经期（第' + dayInCycle + '天）';
+    cls = 'phase-period'; icon = '🩸'; title = '月经期（第' + dayInCycle + '天）';
     advice = '<b>饮食：</b>多吃红肉、菠菜、红枣等补铁食物，喝温热的红糖姜茶，避免生冷食物。<br><b>运动：</b>轻度运动为主，如散步、拉伸、瑜伽，避免高强度训练。<br><b>注意：</b>保证充足睡眠，注意保暖，可热敷缓解痛经。';
   } else if (dayInCycle <= cycle - 14 - 4) {
     cls = 'phase-follicular'; icon = '🌱'; title = '卵泡期（第' + dayInCycle + '天）';
     advice = '<b>饮食：</b>高蛋白饮食（鸡胸肉、鱼虾、鸡蛋），补充绿叶蔬菜和全谷物，减脂黄金期。<br><b>运动：</b>有氧运动效果最佳，可安排跑步、游泳、HIIT。<br><b>注意：</b>精力充沛，适合安排高强度工作和运动。';
   } else if (dayInCycle <= cycle - 14 + 2) {
-    cls = 'phase-ovulation'; icon = '🥚'; title = '排卵期（第' + dayInCycle + '天）';
+    cls = 'phase-ovulation'; icon = '🥚'; title = '预测排卵窗口（第' + dayInCycle + '天）';
     advice = '<b>饮食：</b>补充维生素 E（坚果、牛油果）和 Omega-3（深海鱼），多吃十字花科蔬菜。<br><b>运动：</b>运动量可适当加大，力量训练效果好。<br><b>注意：</b>体温可能略升高，分泌物增多属正常现象。';
   } else {
     cls = 'phase-luteal'; icon = '🌙'; title = '黄体期（第' + dayInCycle + '天）';

@@ -98,8 +98,8 @@ input[type=number]:focus,select:focus{border-color:#667eea}
 .cal-day.predicted{background:rgba(244,143,177,.15);color:#e91e63;border:1.5px dashed #f48fb1}
 .cal-day.ovulation{background:#e3f2fd;color:#1976d2}
 .cal-day.ovulation::before{content:'';position:absolute;top:4px;right:4px;width:6px;height:6px;border-radius:50%;background:#42a5f5}
-.cal-day.safe{background:#e8f5e9;color:#2e7d32}
-.cal-day.danger{background:#fff3e0;color:#e65100}
+.cal-day.low-fertility{background:#e8f5e9;color:#2e7d32}
+.cal-day.high-fertility{background:#fff3e0;color:#e65100}
 .cal-day.symptom-dot::after{content:'';position:absolute;bottom:3px;width:4px;height:4px;border-radius:50%;background:#ff9800}
 .cal-day.period-start{background:#e91e63;color:#fff;font-weight:700;box-shadow:0 0 0 2px #e91e63}
 .cal-day .day-num{line-height:1}
@@ -188,3 +188,43 @@ input[type=number]:focus,select:focus{border-color:#667eea}
 .empty-state{text-align:center;padding:40px 20px;color:#bbb}
 .empty-state .icon{font-size:2.5em;margin-bottom:12px}
 .empty-state p{font-size:.85em;margin-top:8px}
+/* Disclaimer */
+.disclaimer{font-size:.68em;color:#aaa;text-align:center;margin-top:16px;line-height:1.6;padding:8px;border-top:1px solid #f0f0f0}
+/* Alert cards */
+.alert-card{border-radius:12px;padding:12px 14px;margin-bottom:8px;font-size:.78em;line-height:1.6}
+.alert-card.info{background:linear-gradient(135deg,#eff6ff,#dbeafe);border-left:4px solid #3b82f6}
+.alert-card.warn{background:linear-gradient(135deg,#fefce8,#fef9c3);border-left:4px solid #eab308}
+.alert-title{font-weight:700;color:#333;margin-bottom:2px;display:flex;align-items:center;gap:6px}
+.alert-message{color:#555}
+/* Quick check-in */
+.quick-section{margin-bottom:12px}
+.quick-row{display:flex;gap:8px;margin-bottom:10px;align-items:center}
+.quick-label{font-size:.75em;color:#888;min-width:48px;font-weight:600}
+.expand-btn{width:100%;padding:8px;border:1.5px dashed #e0e0e0;border-radius:10px;background:#fff;color:#888;font-size:.78em;cursor:pointer;text-align:center;margin-top:8px}
+.expand-btn:hover{border-color:#667eea;color:#667eea}
+/* Quick buttons (dashboard) */
+.quick-btn{flex:1;padding:12px 8px;border:1.5px solid #e8e8e8;border-radius:10px;background:#fff;font-size:.82em;cursor:pointer;transition:all .15s;text-align:center}
+.quick-btn:hover{border-color:#667eea;color:#667eea}
+.quick-btn.active{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-color:#667eea}
+.quick-btn-row{display:flex;gap:8px;margin-bottom:8px}
+/* Chart tabs */
+.chart-tabs{display:flex;gap:0;margin-bottom:12px;background:#f5f5f5;border-radius:10px;padding:3px}
+.chart-tab{flex:1;padding:8px;text-align:center;border-radius:8px;font-size:.78em;font-weight:600;color:#999;cursor:pointer;transition:all .2s;border:none;background:none}
+.chart-tab.active{background:#fff;color:#667eea;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+/* Data badges */
+.data-badge{display:inline-block;padding:3px 8px;border-radius:12px;font-size:.68em;font-weight:600;background:rgba(102,126,234,.1);color:#667eea}
+/* Privacy page */
+.privacy-card{font-size:.82em;line-height:1.8;color:#555}
+.privacy-card h2{font-size:1.1em;color:#333;margin:20px 0 8px}
+.privacy-card h2:first-child{margin-top:0}
+.privacy-card ul{padding-left:20px;margin:6px 0}
+.privacy-card li{margin-bottom:4px}
+/* Quick popup */
+.quick-popup{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.4)}
+.quick-popup-inner{background:#fff;border-radius:16px;padding:20px;width:90%;max-width:320px;animation:fadeUp .3s ease}
+.quick-popup-title{font-size:.9em;font-weight:700;color:#333;margin-bottom:12px;text-align:center}
+.quick-popup-options{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.quick-popup-opt{padding:8px 16px;border-radius:20px;border:1.5px solid #e0e0e0;background:#fff;font-size:.82em;cursor:pointer;transition:all .15s}
+.quick-popup-opt:hover{border-color:#667eea;color:#667eea}
+.quick-popup-opt.selected{background:#667eea;color:#fff;border-color:#667eea}
+.quick-popup-close{width:100%;margin-top:12px;padding:8px;border:none;background:none;color:#999;font-size:.78em;cursor:pointer}

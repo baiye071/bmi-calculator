@@ -20,6 +20,7 @@
     <a href="period.html">经期日历</a>
     <a href="history.html">历史记录</a>
     <a href="analysis.html" class="active">AI 分析</a>
+    <a href="privacy.html">隐私</a>
   </div>
   <div class="user-menu" id="userMenu" style="display:none">
     <span id="userEmail" style="font-size:.75em;color:#888"></span>
@@ -77,11 +78,20 @@ const SYSTEM_PROMPT = `你是一位温暖贴心的健康管理师，兼具医学
      - ## 🧘‍♀️ 情绪关怀（根据情绪记录和周期阶段，给出心理调节建议+暖心鼓励）
 3. **情绪响应规则**：
    - 如果用户记录了低落/焦虑/哭泣等负面情绪 → 先安慰，再建议，语气要温柔
-   - 如果用户处于经期 → 关注痛经和疲劳，建议休息而非苛求自律
-   - 如果用户处于卵泡期/排卵期 → 鼓励利用精力充沛的优势
+   - 如果用户处于月经期 → 关注痛经和疲劳，建议休息而非苛求自律
+   - 如果用户处于卵泡期/预测排卵窗口 → 鼓励利用精力充沛的优势
    - 如果用户处于黄体期 → 提前预警 PMS，教她如何应对
    - 如果情绪数据总体平稳 → 表扬她的情绪管理能力
-4. 在报告末尾加一段免责声明，但用温暖的语气而非冷冰冰的法律措辞`;
+4. 在报告末尾加一段免责声明，但用温暖的语气而非冷冰冰的法律措辞
+5. **输出结构**：报告必须按以下顺序组织：
+   - 💝 温暖开场
+   - 📋 数据来源说明（列出本报告基于哪些数据、记录数量、时间范围）
+   - 📈 观察到的趋势（基于数据的事实描述，区分"数据证实的趋势"和"统计推断"）
+   - 后续各项建议
+6. **证据等级标注**：
+   - 📊 数据证实：基于多次记录的一致趋势
+   - 📉 统计推断：基于有限数据的推测
+   - 💡 一般建议：基于健康知识的通用建议，非个性化数据驱动`;
 
 async function getData() {
   const [history, period] = await Promise.all([getHistory(), getPeriodData()]);
@@ -123,7 +133,36 @@ function buildPrompt(data) {
   // RAG: retrieve relevant knowledge
   const relevantKnowledge = retrieveKnowledge(userData);
 
-  let prompt = `## 用户身体数据\n`;
+  // Build data sources manifest
+  const ranges = data.period.ranges || [];
+  const completeRanges = ranges.filter(r => r.start && r.end);
+  const symptomEntries = Object.entries(data.period.symptoms || {});
+  let prompt = `## 📋 数据来源说明\n`;
+  prompt += `- 身体数据记录：${data.history.length} 条（${data.history[data.history.length-1]?.date || ''} ~ ${data.history[0]?.date || ''}）\n`;
+  if (!isMale && completeRanges.length) {
+    prompt += `- 月经周期记录：${completeRanges.length} 次（${completeRanges[0].start} ~ ${completeRanges[completeRanges.length-1].start}）\n`;
+    // Compute cycle stats for enriched prompt
+    if (completeRanges.length >= 2) {
+      const sorted = [...completeRanges].sort((a, b) => a.start.localeCompare(b.start));
+      const cycles = [];
+      for (let i = 1; i < sorted.length; i++) {
+        const diff = Math.round((new Date(sorted[i].start) - new Date(sorted[i-1].start)) / 86400000);
+        if (diff > 15 && diff < 60) cycles.push(diff);
+      }
+      if (cycles.length) {
+        const avg = cycles.reduce((a,b) => a+b, 0) / cycles.length;
+        const std = Math.sqrt(cycles.reduce((s, c) => s + Math.pow(c - avg, 2), 0) / cycles.length);
+        const confidence = std <= 3 ? '高' : std <= 6 ? '中' : '低';
+        prompt += `- 周期标准差：${std.toFixed(1)} 天，预测置信度：${confidence}\n`;
+      }
+    }
+  }
+  if (symptomEntries.length) {
+    prompt += `- 症状打卡记录：${symptomEntries.length} 天（${symptomEntries[0][0]} ~ ${symptomEntries[symptomEntries.length-1][0]}）\n`;
+  }
+  prompt += `- 健康知识库：30 条专业参考知识\n\n`;
+
+  prompt += `## 用户身体数据\n`;
   prompt += `- 性别：${isMale ? '男' : '女'}\n`;
   prompt += `- 身高：${latest.height} cm\n`;
   prompt += `- 体重：${latest.weight} kg\n`;
@@ -158,7 +197,7 @@ function buildPrompt(data) {
       const allDays = completeRanges.reduce((sum, r) => {
         return sum + Math.round((new Date(r.end) - new Date(r.start)) / 86400000) + 1;
       }, 0);
-      prompt += `- 经期总天数：${allDays} 天\n`;
+      prompt += `- 月经期总天数：${allDays} 天\n`;
       completeRanges.forEach((r, i) => {
         const dur = Math.round((new Date(r.end) - new Date(r.start)) / 86400000) + 1;
         prompt += `- 第${i+1}次：${r.start} ~ ${r.end}（${dur}天）\n`;
@@ -175,12 +214,12 @@ function buildPrompt(data) {
           const avgCycle = Math.round(cycles.reduce((a, b) => a + b, 0) / cycles.length);
           const avgDuration = Math.round(completeRanges.reduce((s, r) => s + Math.round((new Date(r.end) - new Date(r.start)) / 86400000) + 1, 0) / completeRanges.length);
           prompt += `- 平均周期：${avgCycle} 天\n`;
-          prompt += `- 平均经期天数：${avgDuration} 天\n`;
+          prompt += `- 平均月经期天数：${avgDuration} 天\n`;
           prompt += `- 各次周期长度：${cycles.join(', ')} 天\n`;
           if (cycles.some(c => c < 21 || c > 35)) prompt += `- ⚠️ 存在周期异常（<21天或>35天）\n`;
         }
       } else {
-        prompt += `- 经期次数不足 2 次，无法计算周期\n`;
+        prompt += `- 月经期次数不足 2 次，无法计算周期\n`;
       }
     }
 
@@ -216,14 +255,14 @@ function buildPrompt(data) {
       const dayInCycle = daysSinceStart + 1;
       let phase, phaseEmoji, emotionHint;
       if (dayInCycle <= dur) {
-        phase = '经期'; phaseEmoji = '🩸';
-        emotionHint = '用户正处于经期，可能感到疲惫、情绪低落或痛经不适。请优先表达关心和安慰，建议休息和温补，不要苛求自律。';
+        phase = '月经期'; phaseEmoji = '🩸';
+        emotionHint = '用户正处于月经期，可能感到疲惫、情绪低落或痛经不适。请优先表达关心和安慰，建议休息和温补，不要苛求自律。';
       } else if (dayInCycle <= avgCycle - 14 - 4) {
         phase = '卵泡期'; phaseEmoji = '🌱';
         emotionHint = '用户处于卵泡期，精力逐渐恢复，情绪趋于积极。可以鼓励她利用这个黄金期安排运动和重要事务。';
       } else if (dayInCycle <= avgCycle - 14 + 2) {
-        phase = '排卵期'; phaseEmoji = '🥚';
-        emotionHint = '用户处于排卵期，精力和情绪处于最佳状态。可以给出积极正面的反馈，鼓励社交和运动。';
+        phase = '预测排卵窗口'; phaseEmoji = '🥚';
+        emotionHint = '用户处于预测排卵窗口，精力和情绪处于最佳状态。可以给出积极正面的反馈，鼓励社交和运动。';
       } else {
         phase = '黄体期'; phaseEmoji = '🌙';
         emotionHint = '用户处于黄体期，可能出现 PMS 症状（情绪波动、食欲增加、乳房胀痛）。提前预警并教她如何应对，语气要温柔包容。';
@@ -241,7 +280,7 @@ function buildPrompt(data) {
       prompt += `\n### 详细每日记录\n`;
       symptomEntries.sort((a,b) => a[0].localeCompare(b[0])).forEach(([date, s]) => {
         const isPeriod = isPeriodDay(date);
-        prompt += `- **${date}**${isPeriod ? '（经期）' : ''}：`;
+        prompt += `- **${date}**${isPeriod ? '（月经期）' : ''}：`;
         const parts = [];
         if (s.flow && s.flow !== '无') parts.push('经量:' + s.flow);
         if (s.energy) parts.push('精力:' + s.energy + '/5');
@@ -257,7 +296,7 @@ function buildPrompt(data) {
       });
 
       // Statistical summary
-      prompt += `\n### 经期症状统计分析\n`;
+      prompt += `\n### 月经期症状统计分析\n`;
       const allSymptoms = {};
       const allMoods = {};
       let energySum = 0, energyCnt = 0, crampsSum = 0, crampsCnt = 0, sleepSum = 0, sleepCnt = 0;
@@ -289,7 +328,7 @@ function buildPrompt(data) {
         const ps = {};
         periodSymptoms.forEach(s => ps[s] = (ps[s]||0)+1);
         const topPeriod = Object.entries(ps).sort((a,b) => b[1]-a[1]).slice(0,3);
-        prompt += `- 经期最常见症状：${topPeriod.map(([s,c]) => s+'('+c+'次)').join('、')}\n`;
+        prompt += `- 月经期最常见症状：${topPeriod.map(([s,c]) => s+'('+c+'次)').join('、')}\n`;
       }
     }
   }
@@ -319,7 +358,18 @@ function renderSummary(data) {
   if (latest.whr) html += `<span class="sep">|</span><span class="label">腰臀比</span> <span class="value">${latest.whr}</span>`;
   html += `<br><span class="label">历史记录</span> <span class="value">${data.history.length} 条</span>`;
   if (data.period.ranges && data.period.ranges.length) {
-    html += `<span class="sep">|</span><span class="label">经期记录</span> <span class="value">${data.period.ranges.length} 次周期</span>`;
+    html += `<span class="sep">|</span><span class="label">月经记录</span> <span class="value">${data.period.ranges.length} 次周期</span>`;
+  }
+  html += '</div>';
+  // Data completeness badges
+  html += '<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">';
+  html += `<span class="data-badge">BMI ${data.history.length} 条</span>`;
+  if (data.period.ranges && data.period.ranges.length) {
+    html += `<span class="data-badge">周期 ${data.period.ranges.filter(r => r.start && r.end).length} 次</span>`;
+  }
+  const symptomCount = Object.keys(data.period.symptoms || {}).length;
+  if (symptomCount) {
+    html += `<span class="data-badge">症状 ${symptomCount} 天</span>`;
   }
   html += '</div>';
   el.innerHTML = html;
